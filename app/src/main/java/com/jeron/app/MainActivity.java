@@ -190,23 +190,25 @@ public class MainActivity extends Activity {
             try {
                 byte[] bytes = Base64.decode(b64, Base64.DEFAULT);
                 boolean video = mime != null && mime.startsWith("video");
+                boolean image = mime != null && mime.startsWith("image");
                 String safe = name.replaceAll("[^A-Za-z0-9._-]", "_");
+                String folder = video ? Environment.DIRECTORY_MOVIES
+                        : image ? Environment.DIRECTORY_PICTURES : Environment.DIRECTORY_DOWNLOADS;
                 if (Build.VERSION.SDK_INT >= 29) {
                     ContentValues v = new ContentValues();
                     v.put(MediaStore.MediaColumns.DISPLAY_NAME, safe);
                     v.put(MediaStore.MediaColumns.MIME_TYPE, mime);
-                    v.put(MediaStore.MediaColumns.RELATIVE_PATH,
-                            (video ? Environment.DIRECTORY_MOVIES : Environment.DIRECTORY_PICTURES) + "/Jeron");
+                    v.put(MediaStore.MediaColumns.RELATIVE_PATH, folder + "/Jeron");
                     Uri collection = video ? MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-                            : MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+                            : image ? MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                            : MediaStore.Downloads.EXTERNAL_CONTENT_URI;
                     Uri uri = getContentResolver().insert(collection, v);
                     if (uri == null) return false;
                     try (OutputStream o = getContentResolver().openOutputStream(uri)) {
                         o.write(bytes);
                     }
                 } else {
-                    File dir = new File(Environment.getExternalStoragePublicDirectory(
-                            video ? Environment.DIRECTORY_MOVIES : Environment.DIRECTORY_PICTURES), "Jeron");
+                    File dir = new File(Environment.getExternalStoragePublicDirectory(folder), "Jeron");
                     dir.mkdirs();
                     File f = new File(dir, safe);
                     try (FileOutputStream o = new FileOutputStream(f)) {
