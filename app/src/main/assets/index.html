@@ -163,6 +163,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:cal
   <button class="clr" id="clrAll"><span data-ic="trash" data-s="20"></span>مسح كل المحادثات</button>
 </aside>
 <div class="lb" id="lb"><button class="ib" id="lbX"><span data-ic="x"></span></button><img id="lbImg" alt=""></div>
+<div class="lb" id="dbg" style="align-items:stretch;padding-top:70px"><button class="ib" id="dbgX" aria-label="close"><span data-ic="x"></span></button><div id="dbgT" style="background:#0b0c10;border:1px solid var(--ln2);border-radius:16px;padding:14px;overflow:auto;width:100%;direction:ltr;text-align:left;font:12px/1.6 ui-monospace,monospace;white-space:pre-wrap;color:#cbd2e6"></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -300,7 +301,7 @@ function score(m,task,ar){
 const ckey=c=>c.base+'|'+c.id;
 const cool=()=>store.get('cool',{});
 const cooling=k=>(cool()[k]||0)>Date.now();
-function markFail(k,status){const c=cool(),now=Date.now();c[k]=now+((status===402||status===404)?30:6)*60000;for(const x in c)if(c[x]<now)delete c[x];store.set('cool',c)}
+function markFail(k,status){if(typeof dbg==='function')dbg('fail',k,status||'');const c=cool(),now=Date.now();c[k]=now+((status===402||status===404)?30:6)*60000;for(const x in c)if(c[x]<now)delete c[x];store.set('cool',c)}
 function rankText(task,vision,ar){
   const pool=MODELS.filter(m=>m.out.includes('text')&&m.inp.includes('text')&&!BAD.test(m.id)&&(!vision||m.inp.includes('image')));
   const toC=m=>({id:m.id,base:API,key:DEFAULT_KEY,free:m.free,or:true});
@@ -365,13 +366,19 @@ async function loadModels(){
     MODELS=j.data.map(m=>{const pc=Number(m.pricing?.completion||0)*1e6,pp=Number(m.pricing?.prompt||0)*1e6;
       return{id:m.id,name:m.name||m.id,inp:m.architecture?.input_modalities||[],out:m.architecture?.output_modalities||[],free:pc===0&&pp===0,ctx:m.context_length||0,created:m.created||0,pc}});
   }catch(e){MODELS=FALLBACK}
+  await loadVideoModels();
+}
+async function loadVideoModels(){
   try{
     const r=await fetch(API+'/videos/models',{headers:hdr()});const j=await r.json();
+    if(!r.ok)dbg('videos/models',r.status,(j.error&&j.error.message)||'');
     const a=Array.isArray(j)?j:(j.data||j.models||[]);
     VMODELS=a.map(m=>({id:m.id||m.model||m.slug,raw:m})).filter(m=>m.id);
-  }catch(e){VMODELS=[]}
+  }catch(e){VMODELS=[];dbg('videos/models error',String(e.message||e))}
 }
 
+const LOG=[];
+function dbg(){const t=new Date().toTimeString().slice(0,8)+' '+[].map.call(arguments,x=>typeof x==='string'?x:JSON.stringify(x)).join(' ');LOG.push(t);if(LOG.length>120)LOG.shift()}
 /* ============================== NETWORK (with silent failover) ============================== */
 class Fatal extends Error{}
 async function apiFail(res){let m='';try{m=(await res.clone().json()).error?.message||''}catch(e){}const e=new Error(m||('HTTP '+res.status));e.status=res.status;return e}
@@ -525,7 +532,7 @@ async function respond(c){
     else await doText(c,lastU,a,intent);
   }catch(e){
     if(e.user){if(!a.content&&!a.media.length)c.msgs.splice(c.msgs.indexOf(a),1)}
-    else a.err=e.fatal?e.message:'ما كدرت أكمل هسه. جرب مرة ثانية.';
+    else{dbg('respond error',e.message,e.status||'');a.err=(e.fatal||e.userMsg)?(e.userMsg||e.message):'ما كدرت أكمل هسه. جرب مرة ثانية.'}
   }
   a.pending=false;a.gen=null;
   if(c.msgs.includes(a)&&!a.content&&!a.media.length&&!a.err)a.err='ما كدرت أكمل هسه. جرب مرة ثانية.';
@@ -564,7 +571,7 @@ async function doImage(c,lastU,a,prevMedia){
   }
   const prompt=refs.length?lastU.content:await enhancePrompt('image',lastU.content,ctrl.signal);
   const content=refs.length?[{type:'text',text:prompt}].concat(refs.map(u=>({type:'image_url',image_url:{url:u}}))):prompt;
-  let n=0;
+  let n=0,sawCredit=false;
   for(const m of rankImage(refs.length>0)){
     if(n++>=4)break;
     const ac=new AbortController(),un=linkAbort(ctrl.signal,ac),t=setTimeout(()=>ac.abort(),120000);
@@ -579,13 +586,41 @@ async function doImage(c,lastU,a,prevMedia){
     }catch(e){
       if(ctrl.signal.aborted){const u=new Error('user');u.user=true;throw u}
       if(e.status===401){const f=new Error('مفتاح الخدمة غير صالح حاليًا.');f.fatal=true;throw f}
-      markFail(API+'|'+m.id,e.status);
+      if(e.status===402)sawCredit=true;
+      markFail(API+'|'+m.id,e.status);dbg('image model failed',m.id,e.message||'');
     }finally{clearTimeout(t);un()}
   }
-  throw new Error('image failed');
+  if(!refs.length){
+    try{await freeImage(prompt,lastU.content,a);return}
+    catch(e){if(ctrl.signal.aborted){const u=new Error('user');u.user=true;throw u}dbg('free image failed',String(e.message||e))}
+  }
+  const err=new Error('image failed');
+  err.userMsg=refs.length?'تعديل الصور غير متاح هسه. جرب مرة ثانية بعد شوي.':(sawCredit?'ما كدرت أولّد الصورة: رصيد الخدمة ما يكفي للنماذج المدفوعة، والخدمة المجانية مشغولة. جرب بعد شوي.':'ما كدرت أولّد الصورة هسه. جرب بعد شوي.');
+  throw err;
+}
+function loadImg(url,ms){return new Promise((ok,no)=>{const im=new Image();const t=setTimeout(()=>no(new Error('img timeout')),ms);im.onload=()=>{clearTimeout(t);ok()};im.onerror=()=>{clearTimeout(t);no(new Error('img error'))};im.src=url})}
+async function freeImage(prompt,orig,a){
+  const portrait=/9:16|طولي|portrait|موبايل|ستوري/i.test(orig),wide=/16:9|عريض|landscape|خلفية|wallpaper|بانر|banner/i.test(orig);
+  const [w,h]=portrait?[720,1280]:wide?[1280,720]:[1024,1024];
+  const url='https://image.pollinations.ai/prompt/'+encodeURIComponent(prompt.slice(0,900))+'?model=flux&width='+w+'&height='+h+'&nologo=true&seed='+Math.floor(Math.random()*1e9);
+  let stored=null;
+  try{
+    const ac=new AbortController(),un=linkAbort(ctrl.signal,ac),t=setTimeout(()=>ac.abort(),100000);
+    try{
+      const r=await fetch(url,{signal:ac.signal});if(!r.ok)throw new Error('http '+r.status);
+      const b=await r.blob();if(!/^image\//.test(b.type)||b.size<2000)throw new Error('bad image');
+      stored=await new Promise((ok,no)=>{const f=new FileReader();f.onload=()=>ok(f.result);f.onerror=no;f.readAsDataURL(b)});
+    }finally{clearTimeout(t);un()}
+  }catch(e){
+    if(ctrl.signal.aborted)throw e;
+    await loadImg(url,100000);stored=url;          // CORS blocked: show the image straight from its URL
+  }
+  const id='m'+uid();await mPut(id,stored);a.media.push({type:'image',id});
 }
 async function doVideo(lastU,a){
-  if(!VMODELS.length)throw new Error('no video');
+  if(!VMODELS.length)await loadVideoModels();
+  if(!VMODELS.length){const e=new Error('no video');e.userMsg='توليد الفيديو غير متاح لهذا المفتاح هسه (يحتاج رصيد في حساب OpenRouter).';throw e}
+  let sawCredit=false;
   const prompt=await enhancePrompt('video',lastU.content,ctrl.signal);
   const H=hdr();
   for(const m of rankVideo()){
@@ -608,10 +643,12 @@ async function doVideo(lastU,a){
     }catch(e){
       if(ctrl.signal.aborted){const u=new Error('user');u.user=true;throw u}
       if(e.status===401){const f=new Error('مفتاح الخدمة غير صالح حاليًا.');f.fatal=true;throw f}
-      markFail(API+'|'+m.id,e.status);
+      if(e.status===402)sawCredit=true;
+      markFail(API+'|'+m.id,e.status);dbg('video model failed',m.id,e.message||'');
     }
   }
-  throw new Error('video failed');
+  const ve=new Error('video failed');ve.userMsg=sawCredit?'رصيد الخدمة ما يكفي لتوليد الفيديو.':'ما كدرت أولّد الفيديو هسه. جرب بعد شوي.';
+  throw ve;
 }
 
 /* ============================== EVENTS ============================== */
@@ -661,6 +698,14 @@ $('#cl').onclick=e=>{
 };
 $('#clrAll').onclick=()=>{if(confirm('تمسح كل المحادثات؟')){if(busy)ctrl?.abort();convs.forEach(c=>c.msgs.forEach(m=>{(m.imgs||[]).forEach(mDel);(m.media||[]).forEach(x=>mDel(x.id))}));convs=[];cur='';curConv();save();renderAll();renderConvs();closeDrawer()}};
 
+/* hidden diagnostics: tap the logo 3 times */
+let tapN=0,tapT=0;
+document.querySelector('.brand').addEventListener('click',()=>{
+  const n=Date.now();tapN=(n-tapT<700)?tapN+1:1;tapT=n;
+  if(tapN>=3){tapN=0;$('#dbgT').textContent=(LOG.length?LOG.join('\n'):'(لا يوجد سجل)')+'\n\nmodels: '+MODELS.length+' | video: '+VMODELS.length;$('#dbg').classList.add('on')}
+});
+$('#dbgX').onclick=()=>$('#dbg').classList.remove('on');
+$('#dbgT').onclick=()=>{copyText($('#dbgT').textContent);toast('تم نسخ السجل')};
 /* downloads inside the Android app */
 document.addEventListener('click',async e=>{
   const a=e.target.closest('a[download]');if(!a||!AB||!AB.save)return;
