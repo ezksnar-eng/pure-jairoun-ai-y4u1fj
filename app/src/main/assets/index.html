@@ -229,6 +229,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:cal
 .stfiles{display:flex;flex-wrap:wrap;gap:6px;direction:ltr}.stfiles span{font-size:12px;background:var(--s3);padding:3px 8px;border-radius:8px}
 .stold{display:block;width:100%;margin:6px 0;text-align:right;padding:12px 16px}
 .sheet .area{min-height:90px}
+#vcCap[data-w=e]{color:#ff9d9d}
+.sheet textarea.area{font-size:13.5px}
 </style>
 </head>
 <body>
@@ -264,7 +266,6 @@ header{display:flex;align-items:center;justify-content:space-between;padding:cal
   <button class="newb" id="drNew"><span data-ic="edit" data-s="20"></span>محادثة جديدة</button>
   <input class="srch" id="srch" placeholder="ابحث في المحادثات">
   <div class="cl" id="cl"></div>
-  <button class="clr" id="btnStudio"><span data-ic="team" data-s="20"></span>استوديو العملاء</button>
   <button class="clr" id="btnVoice2"><span data-ic="wave" data-s="20"></span>محادثة صوتية</button>
   <button class="clr" id="btnSettings"><span data-ic="settings" data-s="20"></span>الإعدادات</button>
   <button class="clr" id="clrAll"><span data-ic="trash" data-s="20"></span>مسح كل المحادثات</button>
@@ -280,15 +281,12 @@ header{display:flex;align-items:center;justify-content:space-between;padding:cal
   <div id="vcStat"></div><div id="vcOrb"></div><div id="vcCap"></div>
   <div class="vbar"><button class="ib" id="vcMic"><span data-ic="mic"></span></button><input id="vcIn" placeholder="أو اكتب هنا…"><button class="ib" id="vcSend"><span data-ic="send"></span></button><button class="ib x" id="vcX"><span data-ic="x"></span></button></div>
 </div>
-<div class="panel" id="studio">
-  <div class="ph"><button class="ib" id="stX"><span data-ic="x"></span></button><b id="stT">استوديو جيرون</b></div>
-  <div id="stBody"></div>
-</div>
 
 <div class="lb" id="lb"><button class="ib" id="lbX"><span data-ic="x"></span></button><img id="lbImg" alt=""></div>
 <div class="lb" id="dbg" style="align-items:stretch;padding-top:70px"><button class="ib" id="dbgX" aria-label="close"><span data-ic="x"></span></button><div id="dbgT" style="background:#0b0c10;border:1px solid var(--ln2);border-radius:16px;padding:14px;overflow:auto;width:100%;direction:ltr;text-align:left;font:12px/1.6 ui-monospace,monospace;white-space:pre-wrap;color:#cbd2e6"></div></div>
 <div class="toast" id="toast"></div>
 
+<script src="custom_model.js"></script>
 <script>
 /* ============================== CONFIG ============================== */
 const DEFAULT_KEY=atob(['c2stb3It','djEtM2Qw','MmU0ODc1','YzI3Mjlk','NTI2N2Zm','ZmI1NGZk','YTEwOWM1','YmNmZWQ2','MGJjNzUx','NzgzNGVk','NTYxNmE5','NWFkMTky','OQ=='].join(''));
@@ -390,7 +388,7 @@ const HOW=/(شلون|كيف|ليش|لماذا|شنو الفرق|how (to|do|can|d
 const QUES=/(شنو|ماذا|ما هذ|وصف|describe|what|اقرأ|اقرا|read|ترجم|translate|حلل|analy|اشرح|explain|وين|مين|who|where|عدد|count|كم )/i;
 const EDIT=/(عدل|عدّل|غير|غيّر|بدل|بدّل|شيل|احذف|امسح|ضيف|أضف|اضف|خلي|خلّي|حول|حوّل|لون|edit|change|remove|add|replace|make it|make this|turn|convert|style|blur|enhance|upscale|حسن|حسّن)/i;
 const CODE=/(```|function\s|=>|\bclass\s|\bdef\s|import\s|SELECT\s|<div|برمج|كود|code|bug|debug|html|css|javascript|typescript|python|java\b|kotlin|swift|react|vue|angular|node\.?js|flutter|django|flask|laravel|sql|regex|سكربت|script|compile|يبني (لي )?(تطبيق|موقع|برنامج)|اصلح (الكود|البق)|refactor|unit test|api\b)/i
-function detectIntent0(text,hasImg,prevWasMedia){
+function detectIntent(text,hasImg,prevWasMedia){
   const t=(text||'').trim().slice(0,300);
   if(hasImg){
     if(!t||QUES.test(t))return 'vision';
@@ -627,7 +625,6 @@ const lastIdx=c=>c.msgs.length-1;
 const MODES={
  general:{n:'عام',i:'msg',p:''},
  manhwa:{n:'مترجم مانهوا',i:'lang',p:'MODE: Arabic manhwa/manga translator. Translate the text the user sends (or read the speech bubbles in an attached image) into natural Arabic that fits comics: keep each character\'s voice, honorifics and sound effects, one line per bubble in reading order, no commentary unless asked.'},
- code:{n:'مبرمج',i:'code',p:'MODE: senior software engineer. Give correct, runnable, well-structured code with brief explanations; prefer simple solutions.'},
  writer:{n:'كاتب',i:'edit',p:'MODE: skilled Arabic writer and editor. Write engaging, well-structured text in the requested tone and dialect.'},
  teacher:{n:'معلّم',i:'book',p:'MODE: patient teacher. Explain step by step with simple examples, then ask one short question to check understanding.'}
 };
@@ -1037,6 +1034,17 @@ if(AB&&AB.startVoice){
 const AUDIO_SRC="/* JeronAudio \u2014 synth engine: music scores + sound effects, realtime + offline WAV render. No dependencies. */\n(function (root) {\n  'use strict';\n  if (root.JeronAudio) return;\n\n  var NOTE_BASE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };\n  function clamp(v, a, b) { v = +v; if (isNaN(v)) v = a; return Math.min(b, Math.max(a, v)); }\n  function parseNote(s) {\n    s = String(s).trim();\n    if (/^r(est)?$/i.test(s)) return null;\n    var m = /^([A-Ga-g])([#b]?)(-?\\d)?$/.exec(s);\n    if (!m) return NaN;\n    var b = NOTE_BASE[m[1].toUpperCase()];\n    if (m[2] === '#') b++; else if (m[2] === 'b') b--;\n    var o = m[3] === undefined ? 4 : parseInt(m[3], 10);\n    return 12 * (o + 1) + b;\n  }\n  function hz(m) { return 440 * Math.pow(2, (m - 69) / 12); }\n\n  function parseSeq(str) {\n    var out = [], beat = 0, toks = String(str || '').trim().split(/[\\s,|]+/);\n    for (var i = 0; i < toks.length; i++) {\n      var t = toks[i];\n      if (!t) continue;\n      var ci = t.lastIndexOf(':');\n      var name = ci >= 0 ? t.slice(0, ci) : t;\n      var d = ci >= 0 ? parseFloat(t.slice(ci + 1)) : 1;\n      if (!(d > 0)) d = 1;\n      if (d > 16) d = 16;\n      var parts = name.split('+'), notes = [], ok = true;\n      for (var j = 0; j < parts.length; j++) {\n        var n = parseNote(parts[j]);\n        if (n === null) continue;\n        if (isNaN(n)) { ok = false; break; }\n        notes.push(n);\n      }\n      if (!ok) continue;\n      if (notes.length) out.push({ beat: beat, dur: d, notes: notes });\n      beat += d;\n    }\n    return { events: out, len: beat };\n  }\n\n  function noiseBuf(c) {\n    if (c.__jnb) return c.__jnb;\n    var len = Math.floor(c.sampleRate * 2), b = c.createBuffer(1, len, c.sampleRate), d = b.getChannelData(0);\n    for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;\n    c.__jnb = b;\n    return b;\n  }\n  function noiseSrc(c, t, dur) {\n    var s = c.createBufferSource();\n    s.buffer = noiseBuf(c);\n    s.loop = true;\n    s.start(t, Math.random() * 1.5);\n    s.stop(t + dur);\n    return s;\n  }\n  function osc(c, type, f, t, stop) {\n    var o = c.createOscillator();\n    o.type = type;\n    o.frequency.value = f;\n    o.start(t);\n    o.stop(stop);\n    return o;\n  }\n  function adsr(g, t, a, d, s, r, dur, peak) {\n    var sus = Math.max(0.0001, peak * s);\n    var hold = Math.max(a + d, dur);\n    g.gain.setValueAtTime(0.0001, t);\n    g.gain.linearRampToValueAtTime(peak, t + a);\n    g.gain.exponentialRampToValueAtTime(sus, t + a + d);\n    g.gain.setValueAtTime(sus, t + hold);\n    g.gain.exponentialRampToValueAtTime(0.0001, t + hold + r);\n    return t + hold + r + 0.02;\n  }\n  function lp(c, f, q) {\n    var n = c.createBiquadFilter();\n    n.type = 'lowpass';\n    n.frequency.value = f;\n    n.Q.value = q || 0.7;\n    return n;\n  }\n  function vib(c, o, t, end, rate, cents) {\n    var l = osc(c, 'sine', rate, t, end), g = c.createGain();\n    g.gain.value = cents;\n    l.connect(g);\n    g.connect(o.detune);\n  }\n\n  /* ---------- melodic instruments ---------- */\n  var INST = {\n    piano: function (c, out, t, dur, f, v) {\n      var g = c.createGain(), flt = lp(c, 4200), end = adsr(g, t, 0.004, 0.4, 0.22, 0.3, dur, 0.28 * v);\n      var o1 = osc(c, 'triangle', f, t, end), o2 = osc(c, 'sine', f * 2, t, end), g2 = c.createGain();\n      g2.gain.value = 0.25;\n      o1.connect(g); o2.connect(g2); g2.connect(g); g.connect(flt); flt.connect(out);\n    },\n    pluck: function (c, out, t, dur, f, v) {\n      var g = c.createGain(), flt = lp(c, 5000, 2), end = adsr(g, t, 0.002, 0.28, 0.1, 0.12, Math.min(dur, 0.4), 0.3 * v);\n      var o = osc(c, 'sawtooth', f, t, end);\n      flt.frequency.setValueAtTime(5200, t);\n      flt.frequency.exponentialRampToValueAtTime(500, t + 0.3);\n      o.connect(flt); flt.connect(g); g.connect(out);\n    },\n    lead: function (c, out, t, dur, f, v) {\n      var g = c.createGain(), flt = lp(c, 3600, 1.2), end = adsr(g, t, 0.02, 0.1, 0.7, 0.15, dur, 0.2 * v);\n      var o1 = osc(c, 'square', f, t, end), o2 = osc(c, 'sawtooth', f, t, end);\n      o2.detune.value = 8;\n      var g2 = c.createGain(); g2.gain.value = 0.5;\n      o1.connect(flt); o2.connect(g2); g2.connect(flt); flt.connect(g); g.connect(out);\n      vib(c, o1, t, end, 5.5, 7); vib(c, o2, t, end, 5.5, 7);\n    },\n    bass: function (c, out, t, dur, f, v) {\n      var g = c.createGain(), flt = lp(c, 700, 1), end = adsr(g, t, 0.01, 0.12, 0.8, 0.08, dur, 0.4 * v);\n      var o1 = osc(c, 'sawtooth', f, t, end), o2 = osc(c, 'sine', f, t, end), g2 = c.createGain();\n      g2.gain.value = 0.8;\n      o1.connect(flt); flt.connect(g); o2.connect(g2); g2.connect(g); g.connect(out);\n    },\n    pad: function (c, out, t, dur, f, v) {\n      var a = Math.min(0.4, dur * 0.4), g = c.createGain(), flt = lp(c, 1500, 0.6), end = adsr(g, t, a, 0.3, 0.8, 0.8, dur, 0.13 * v);\n      [-7, 7].forEach(function (dc) {\n        var o = osc(c, 'sawtooth', f, t, end);\n        o.detune.value = dc;\n        o.connect(flt);\n      });\n      flt.connect(g); g.connect(out);\n    },\n    strings: function (c, out, t, dur, f, v) {\n      var a = Math.min(0.25, dur * 0.4), g = c.createGain(), flt = lp(c, 2600, 0.5), end = adsr(g, t, a, 0.2, 0.85, 0.5, dur, 0.12 * v);\n      [-10, 0, 10].forEach(function (dc) {\n        var o = osc(c, 'sawtooth', f, t, end);\n        o.detune.value = dc;\n        o.connect(flt);\n        vib(c, o, t, end, 5, 5);\n      });\n      flt.connect(g); g.connect(out);\n    },\n    organ: function (c, out, t, dur, f, v) {\n      var g = c.createGain(), end = adsr(g, t, 0.01, 0.05, 0.9, 0.06, dur, 0.16 * v);\n      [[1, 0.5], [2, 0.3], [3, 0.2], [4, 0.1]].forEach(function (h) {\n        var o = osc(c, 'sine', f * h[0], t, end), hg = c.createGain();\n        hg.gain.value = h[1];\n        o.connect(hg); hg.connect(g);\n      });\n      g.connect(out);\n    },\n    bell: function (c, out, t, dur, f, v) {\n      var g = c.createGain(), end = t + 2.2;\n      g.gain.setValueAtTime(0.0001, t);\n      g.gain.linearRampToValueAtTime(0.25 * v, t + 0.002);\n      g.gain.exponentialRampToValueAtTime(0.0001, end);\n      [[1, 1], [2.76, 0.5], [5.4, 0.25], [8.93, 0.12]].forEach(function (h) {\n        var o = osc(c, 'sine', f * h[0], t, end), hg = c.createGain();\n        hg.gain.value = h[1];\n        o.connect(hg); hg.connect(g);\n      });\n      g.connect(out);\n    },\n    flute: function (c, out, t, dur, f, v) {\n      var a = Math.min(0.06, dur * 0.3), g = c.createGain(), end = adsr(g, t, a, 0.05, 0.85, 0.1, dur, 0.22 * v);\n      var o = osc(c, 'sine', f, t, end), o2 = osc(c, 'triangle', f * 2, t, end), g2 = c.createGain();\n      g2.gain.value = 0.08;\n      o.connect(g); o2.connect(g2); g2.connect(g);\n      vib(c, o, t, end, 5.2, 9);\n      var n = noiseSrc(c, t, end - t), bp = c.createBiquadFilter(), ng = c.createGain();\n      bp.type = 'bandpass'; bp.frequency.value = Math.min(9000, f * 2); bp.Q.value = 2; ng.gain.value = 0.05;\n      n.connect(bp); bp.connect(ng); ng.connect(g);\n      g.connect(out);\n    }\n  };\n  INST.keys = INST.piano; INST.synth = INST.lead; INST.guitar = INST.pluck; INST.harp = INST.pluck;\n  INST.violin = INST.strings; INST.cello = INST.strings; INST.brass = INST.lead; INST.marimba = INST.pluck;\n\n  /* ---------- drums ---------- */\n  function nz(c, out, t, dur, type, f, q, peak) {\n    var s = noiseSrc(c, t, dur + 0.05), flt = c.createBiquadFilter(), g = c.createGain();\n    flt.type = type; flt.frequency.value = f; flt.Q.value = q || 1;\n    g.gain.setValueAtTime(peak, t);\n    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);\n    s.connect(flt); flt.connect(g); g.connect(out);\n  }\n  function tone(c, out, t, f0, f1, dur, peak, type) {\n    var o = osc(c, type || 'sine', f0, t, t + dur + 0.05), g = c.createGain();\n    o.frequency.setValueAtTime(f0, t);\n    o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);\n    g.gain.setValueAtTime(peak, t);\n    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);\n    o.connect(g); g.connect(out);\n  }\n  var DRUM = {\n    kick: function (c, o, t, v) { tone(c, o, t, 150, 42, 0.32, 0.9 * v); },\n    snare: function (c, o, t, v) { nz(c, o, t, 0.18, 'highpass', 1200, 0.7, 0.45 * v); tone(c, o, t, 200, 120, 0.1, 0.35 * v, 'triangle'); },\n    hat: function (c, o, t, v) { nz(c, o, t, 0.05, 'highpass', 7500, 0.7, 0.22 * v); },\n    ohat: function (c, o, t, v) { nz(c, o, t, 0.25, 'highpass', 7000, 0.7, 0.2 * v); },\n    clap: function (c, o, t, v) { for (var i = 0; i < 3; i++) nz(c, o, t + i * 0.011, 0.04, 'bandpass', 1500, 1.2, 0.3 * v); nz(c, o, t + 0.033, 0.16, 'bandpass', 1400, 1, 0.25 * v); },\n    tom: function (c, o, t, v) { tone(c, o, t, 140, 70, 0.28, 0.6 * v); }\n  };\n\n  /* ---------- score ---------- */\n  function normalizeScore(sc) {\n    if (typeof sc === 'string') { try { sc = JSON.parse(sc); } catch (e) { return null; } }\n    if (!sc || typeof sc !== 'object') return null;\n    var tracks = Array.isArray(sc.tracks) ? sc.tracks.slice(0, 10) : [];\n    var out = {\n      title: String(sc.title || 'Jeron'),\n      bpm: clamp(sc.bpm || 110, 40, 220),\n      bars: sc.bars ? clamp(sc.bars, 1, 128) : 0,\n      reverb: clamp(sc.reverb == null ? 0.2 : sc.reverb, 0, 0.8),\n      tracks: []\n    };\n    tracks.forEach(function (t) {\n      if (!t || typeof t !== 'object') return;\n      var inst = String(t.inst || 'piano').toLowerCase();\n      var isDrum = inst === 'drums' || inst === 'drum' || inst === 'perc';\n      var tr = { inst: isDrum ? 'drums' : (INST[inst] ? inst : 'piano'), vol: clamp(t.vol == null ? 0.7 : t.vol, 0, 1.2), pan: clamp(t.pan || 0, -1, 1), loop: t.loop !== false };\n      if (isDrum) {\n        tr.pat = {};\n        ['kick', 'snare', 'hat', 'ohat', 'clap', 'tom'].forEach(function (k) { if (typeof t[k] === 'string') tr.pat[k] = t[k].replace(/\\s+/g, '').slice(0, 128); });\n      } else {\n        tr.seq = String(t.seq || '').slice(0, 6000);\n        tr.parsed = parseSeq(tr.seq);\n        if (!tr.parsed.events.length) return;\n      }\n      out.tracks.push(tr);\n    });\n    if (!out.tracks.length) return null;\n    return out;\n  }\n  function songBeats(sc) {\n    var total = 0;\n    if (sc.bars) total = sc.bars * 4;\n    else sc.tracks.forEach(function (t) { if (t.parsed) total = Math.max(total, t.parsed.len); });\n    if (!total) total = 16;\n    return Math.min(total, 150 * sc.bpm / 60);\n  }\n  function makeReverb(c, sec, decay) {\n    var len = Math.floor(c.sampleRate * sec), ir = c.createBuffer(2, len, c.sampleRate);\n    for (var ch = 0; ch < 2; ch++) {\n      var d = ir.getChannelData(ch);\n      for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);\n    }\n    var cv = c.createConvolver();\n    cv.buffer = ir;\n    return cv;\n  }\n  function buildChain(c, dest, sc) {\n    var inp = c.createGain();\n    inp.connect(dest);\n    if (sc.reverb > 0.01) {\n      var rv = makeReverb(c, 1.8, 2.5), wet = c.createGain();\n      wet.gain.value = sc.reverb;\n      inp.connect(rv); rv.connect(wet); wet.connect(dest);\n    }\n    return inp;\n  }\n  function scheduleScore(c, inp, sc, t0) {\n    var spb = 60 / sc.bpm, total = songBeats(sc);\n    sc.tracks.forEach(function (tr) {\n      var bus = c.createGain(), last = bus;\n      bus.gain.value = tr.vol;\n      if (c.createStereoPanner && tr.pan) {\n        var p = c.createStereoPanner();\n        p.pan.value = tr.pan;\n        bus.connect(p);\n        last = p;\n      }\n      last.connect(inp);\n      if (tr.inst === 'drums') {\n        var names = Object.keys(tr.pat), plen = 16;\n        names.forEach(function (n) { plen = Math.max(plen, tr.pat[n].length); });\n        var cyc = plen * 0.25;\n        for (var base = 0; base < total; base += cyc) {\n          names.forEach(function (n) {\n            var s = tr.pat[n];\n            for (var i = 0; i < s.length; i++) {\n              var ch = s.charAt(i);\n              if (ch === '.' || ch === '-' || ch === '0') continue;\n              var beat = base + i * 0.25;\n              if (beat >= total) break;\n              DRUM[n](c, bus, t0 + beat * spb, ch === 'X' ? 1 : 0.75);\n            }\n          });\n          if (!tr.loop) break;\n        }\n      } else {\n        var P = tr.parsed;\n        for (var b = 0; b < total; b += P.len) {\n          for (var k = 0; k < P.events.length; k++) {\n            var e = P.events[k], bt = b + e.beat;\n            if (bt >= total) break;\n            var d = Math.min(e.dur, total - bt) * spb * 0.97;\n            for (var q = 0; q < e.notes.length; q++) INST[tr.inst](c, bus, t0 + bt * spb, d, hz(e.notes[q]), 0.85 / Math.sqrt(e.notes.length));\n          }\n          if (!tr.loop || P.len <= 0) break;\n        }\n      }\n    });\n    return total * spb;\n  }\n  function makeMaster(c, dest) {\n    var m = c.createGain(), comp = c.createDynamicsCompressor();\n    m.gain.value = 0.85;\n    m.connect(comp); comp.connect(dest);\n    return m;\n  }\n  function OC() { return root.OfflineAudioContext || root.webkitOfflineAudioContext; }\n  function render(score, opt) {\n    opt = opt || {};\n    var sc = normalizeScore(score);\n    if (!sc) return Promise.reject(new Error('bad score'));\n    var sr = opt.rate || 44100, ch = opt.mono ? 1 : 2, secs = songBeats(sc) * 60 / sc.bpm + (sc.reverb > 0.01 ? 2.2 : 1);\n    var c = new (OC())(ch, Math.ceil(secs * sr), sr);\n    var master = makeMaster(c, c.destination);\n    scheduleScore(c, buildChain(c, master, sc), sc, 0.05);\n    return c.startRendering();\n  }\n\n  /* ---------- sound effects ---------- */\n  var VALID_FILT = { lowpass: 1, highpass: 1, bandpass: 1, notch: 1 };\n  var VALID_WAVE = { sine: 1, square: 1, sawtooth: 1, triangle: 1 };\n  function sfxLen(spec) {\n    var layers = Array.isArray(spec) ? spec : (spec && spec.layers) || [], end = 0;\n    layers.slice(0, 12).forEach(function (L) { end = Math.max(end, (+L.at || 0) + clamp(L.dur || 0.2, 0.02, 4)); });\n    return end;\n  }\n  function playSfxSpec(c, dest, spec, t0) {\n    var layers = (Array.isArray(spec) ? spec : (spec && spec.layers) || []).slice(0, 12), end = 0;\n    layers.forEach(function (L) {\n      if (!L || typeof L !== 'object') return;\n      var at = clamp(L.at || 0, 0, 6), dur = clamp(L.dur || 0.2, 0.02, 4), vol = clamp(L.vol == null ? 0.5 : L.vol, 0, 1.2);\n      var att = Math.min(clamp(L.att == null ? 0.003 : L.att, 0.001, 1), dur / 2), t = t0 + at, g = c.createGain(), src, node;\n      g.gain.setValueAtTime(0.0001, t);\n      g.gain.linearRampToValueAtTime(Math.max(0.0002, vol), t + att);\n      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);\n      if (L.t === 'noise' || L.wave === 'noise') {\n        src = noiseSrc(c, t, dur + 0.05);\n      } else {\n        var f0 = clamp(L.f0 || 440, 20, 14000), f1 = clamp(L.f1 || f0, 20, 14000);\n        src = c.createOscillator();\n        src.type = VALID_WAVE[L.wave] ? L.wave : 'sine';\n        src.frequency.setValueAtTime(f0, t);\n        if (f1 !== f0) src.frequency.exponentialRampToValueAtTime(f1, t + dur);\n        src.start(t); src.stop(t + dur + 0.05);\n      }\n      node = src;\n      if (L.filt && VALID_FILT[L.filt]) {\n        var f = c.createBiquadFilter(), a0 = clamp(L.ff0 || 2000, 20, 16000), a1 = clamp(L.ff1 || a0, 20, 16000);\n        f.type = L.filt; f.Q.value = clamp(L.q || 1, 0.1, 20);\n        f.frequency.setValueAtTime(a0, t);\n        if (a1 !== a0) f.frequency.exponentialRampToValueAtTime(a1, t + dur);\n        src.connect(f);\n        node = f;\n      }\n      node.connect(g); g.connect(dest);\n      end = Math.max(end, at + dur);\n    });\n    return end;\n  }\n  function S(w, at, dur, f0, f1, vol, extra) {\n    var o = { t: 'osc', wave: w, at: at, dur: dur, f0: f0, f1: f1, vol: vol };\n    if (extra) for (var k in extra) o[k] = extra[k];\n    return o;\n  }\n  function N(at, dur, vol, filt, ff0, ff1, att) { return { t: 'noise', at: at, dur: dur, vol: vol, filt: filt, ff0: ff0, ff1: ff1, att: att }; }\n  var PRESETS = {\n    coin: [S('square', 0, 0.08, 988, 988, 0.3), S('square', 0.08, 0.35, 1319, 1319, 0.3)],\n    jump: [S('square', 0, 0.25, 250, 720, 0.28)],\n    laser: [S('sawtooth', 0, 0.28, 1500, 110, 0.28, { filt: 'lowpass', ff0: 5000, ff1: 500 })],\n    shoot: [S('square', 0, 0.16, 900, 150, 0.25), N(0, 0.1, 0.25, 'highpass', 2000, 4000)],\n    explosion: [N(0, 1.2, 0.9, 'lowpass', 2600, 70, 0.005), S('sine', 0, 0.8, 130, 28, 0.85)],\n    hit: [N(0, 0.12, 0.6, 'bandpass', 1800, 600), S('sine', 0, 0.15, 190, 60, 0.6)],\n    powerup: [S('square', 0, 0.08, 523, 523, 0.25), S('square', 0.07, 0.08, 659, 659, 0.25), S('square', 0.14, 0.08, 784, 784, 0.25), S('square', 0.21, 0.3, 1047, 1047, 0.25)],\n    click: [S('square', 0, 0.035, 1500, 900, 0.22)],\n    select: [S('triangle', 0, 0.09, 700, 950, 0.3)],\n    win: [S('triangle', 0, 0.15, 523, 523, 0.35), S('triangle', 0.13, 0.15, 659, 659, 0.35), S('triangle', 0.26, 0.15, 784, 784, 0.35), S('triangle', 0.39, 0.55, 1047, 1047, 0.4), S('square', 0.39, 0.55, 523, 523, 0.12)],\n    lose: [S('sawtooth', 0, 0.35, 400, 220, 0.3, { filt: 'lowpass', ff0: 2500, ff1: 400 }), S('sawtooth', 0.35, 0.6, 300, 90, 0.3, { filt: 'lowpass', ff0: 2000, ff1: 250 })],\n    step: [N(0, 0.07, 0.35, 'lowpass', 700, 300)],\n    whoosh: [N(0, 0.55, 0.55, 'bandpass', 300, 3200, 0.18)],\n    bell: [S('sine', 0, 1.3, 880, 880, 0.3), S('sine', 0, 0.9, 2217, 2217, 0.12)],\n    alarm: [S('square', 0, 0.18, 880, 880, 0.22), S('square', 0.2, 0.18, 660, 660, 0.22), S('square', 0.4, 0.18, 880, 880, 0.22), S('square', 0.6, 0.18, 660, 660, 0.22)],\n    pickup: [S('sine', 0, 0.14, 600, 1300, 0.35)],\n    heal: [S('triangle', 0, 0.14, 523, 523, 0.3), S('triangle', 0.1, 0.14, 659, 659, 0.3), S('triangle', 0.2, 0.3, 784, 784, 0.3)],\n    error: [S('square', 0, 0.12, 160, 160, 0.3), S('square', 0.14, 0.2, 120, 120, 0.3)]\n  };\n  function renderSfx(spec, opt) {\n    opt = opt || {};\n    var sp = typeof spec === 'string' ? PRESETS[spec] : spec;\n    if (!sp) return Promise.reject(new Error('unknown sfx'));\n    var sr = opt.rate || 44100, len = sfxLen(sp) + 0.4, c = new (OC())(opt.mono ? 1 : 2, Math.ceil(len * sr), sr);\n    var master = makeMaster(c, c.destination);\n    playSfxSpec(c, master, sp, 0.02);\n    return c.startRendering();\n  }\n\n  /* ---------- WAV ---------- */\n  function toWav(buf, opt) {\n    var ch = buf.numberOfChannels, len = buf.length, sr = buf.sampleRate, data = [], peak = 0, i, c;\n    for (c = 0; c < ch; c++) data.push(buf.getChannelData(c));\n    var norm = !opt || opt.normalize !== false;\n    if (norm) for (c = 0; c < ch; c++) for (i = 0; i < len; i++) { var a = Math.abs(data[c][i]); if (a > peak) peak = a; }\n    var k = norm && peak > 0.0001 ? Math.min(8, 0.92 / peak) : 1;\n    var ab = new ArrayBuffer(44 + len * ch * 2), dv = new DataView(ab);\n    function ws(o, s) { for (var j = 0; j < s.length; j++) dv.setUint8(o + j, s.charCodeAt(j)); }\n    ws(0, 'RIFF'); dv.setUint32(4, 36 + len * ch * 2, true); ws(8, 'WAVE'); ws(12, 'fmt ');\n    dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, ch, true); dv.setUint32(24, sr, true);\n    dv.setUint32(28, sr * ch * 2, true); dv.setUint16(32, ch * 2, true); dv.setUint16(34, 16, true);\n    ws(36, 'data'); dv.setUint32(40, len * ch * 2, true);\n    var off = 44;\n    for (i = 0; i < len; i++) for (c = 0; c < ch; c++) {\n      var s = Math.max(-1, Math.min(1, data[c][i] * k));\n      dv.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);\n      off += 2;\n    }\n    return new Blob([ab], { type: 'audio/wav' });\n  }\n\n  /* ---------- realtime ---------- */\n  var RT = { ctx: null, master: null, buses: [], timer: null, sd: null };\n  function ensure() {\n    if (!RT.ctx) {\n      var AC = root.AudioContext || root.webkitAudioContext;\n      RT.ctx = new AC();\n      RT.master = makeMaster(RT.ctx, RT.ctx.destination);\n    }\n    if (RT.ctx.state === 'suspended') { try { RT.ctx.resume(); } catch (e) {} }\n    return RT.ctx;\n  }\n  function sfx(name, opt) {\n    var spec = typeof name === 'string' ? PRESETS[name] : name;\n    if (!spec) return 0;\n    var c = ensure(), g = c.createGain();\n    g.gain.value = (opt && opt.vol) || 1;\n    g.connect(RT.master);\n    return playSfxSpec(c, g, spec, c.currentTime + 0.01);\n  }\n  function startSong(score, opt) {\n    var sc = normalizeScore(score);\n    if (!sc) return 0;\n    var c = ensure(), bus = c.createGain();\n    bus.gain.value = (opt && opt.vol) || 1;\n    bus.connect(RT.master);\n    RT.buses.push(bus);\n    var len = scheduleScore(c, buildChain(c, bus, sc), sc, c.currentTime + 0.05);\n    if (opt && opt.loop) RT.timer = setTimeout(function () { startSong(score, opt); }, Math.max(400, (len - 0.1) * 1000));\n    return len;\n  }\n  function stop() {\n    clearTimeout(RT.timer);\n    RT.timer = null;\n    var c = RT.ctx, bs = RT.buses;\n    RT.buses = [];\n    if (!c) return;\n    bs.forEach(function (b) {\n      try { b.gain.setTargetAtTime(0, c.currentTime, 0.04); } catch (e) {}\n      setTimeout(function () { try { b.disconnect(); } catch (e) {} }, 500);\n    });\n  }\n  function play(score, opt) { stop(); return startSong(score, opt); }\n  function streamDest() {\n    var c = ensure();\n    if (!RT.sd) { RT.sd = c.createMediaStreamDestination(); RT.master.connect(RT.sd); }\n    return RT.sd.stream;\n  }\n  function speak(text, opt) {\n    opt = opt || {};\n    if (!root.speechSynthesis) return false;\n    var u = new root.SpeechSynthesisUtterance(String(text).slice(0, 3000));\n    u.lang = opt.lang || (/[\u0600-\u06ff]/.test(text) ? 'ar-SA' : 'en-US');\n    u.rate = opt.rate || 1; u.pitch = opt.pitch || 1;\n    root.speechSynthesis.cancel();\n    root.speechSynthesis.speak(u);\n    return true;\n  }\n\n  root.JeronAudio = {\n    version: 1, render: render, renderSfx: renderSfx, toWav: toWav, play: play, stop: stop, sfx: sfx,\n    parseScore: normalizeScore, streamDest: streamDest, speak: speak, presets: Object.keys(PRESETS),\n    ctx: function () { return RT.ctx; }, scoreSeconds: function (s) { var n = normalizeScore(s); return n ? songBeats(n) * 60 / n.bpm : 0; }\n  };\n})(typeof window !== 'undefined' ? window : this);\n";
 (0,eval)(AUDIO_SRC);
 /* ============================== NETWORK LAYER · PROVIDERS · OPEN-SOURCE MODELS ============================== */
+/* ---- OpenRouter keys: several keys, automatic switch when one runs out ---- */
+const OR_DEFAULTS=[atob(['c2stb3It','djEtMTlj','YjE0NDI2','MjRmMjJl','Y2JjZmU0','NDhiYTZk','YjA0MjVm','OGEyMTNi','ODA1ZWFk','OTc1ZTFk','NmNkZjlm','MTdhOTk4','OQ=='].join('')),atob(['c2stb3It','djEtMWRh','YTNjOWUw','YmRiZjBi','N2IxODQ4','MjEzYjYz','NmVlZDcz','OTUwZGU3','M2NjNzE2','ZjIwMTY1','YjZlOWI0','N2E2YjNl','MQ=='].join('')),atob(['c2stb3It','djEtYjAy','ZWU2NmZl','YTFkZTIz','OTQwY2Y0','MTY5ZDIw','Mjk2YjE4','YWNiZjBk','YTBjMzFm','ZjQ5Nzhh','YWJiNzk4','MWQ1NzVj','OA=='].join('')),DEFAULT_KEY];
+function orList(){
+  const u=(store.get('keys',{}).openrouter)||{};
+  const mine=String(u.list||'').split(/[\s,;]+/).concat([u.key||'']).filter(k=>/^sk-or-/.test(k));
+  return [...new Set(mine.concat(OR_DEFAULTS))];
+}
+const orDeadMap=()=>store.get('ordead',{});
+function orCurrent(){const d=orDeadMap(),now=Date.now();for(const k of orList())if((d[k]||0)<now)return k;return null}
+function orKill(k,ms){const d=orDeadMap();d[k]=Date.now()+ms;store.set('ordead',d)}
+function orStatus(){const d=orDeadMap(),now=Date.now(),l=orList();return{total:l.length,alive:l.filter(k=>(d[k]||0)<now).length}}
 /* ---- native fetch (bypasses CORS inside the Android app) ---- */
 const NH=new Map();
 window.__nh=(id,type,a,b)=>{const h=NH.get(id);if(h)h(type,a,b)};
@@ -1107,10 +1115,24 @@ const PROV={
 };
 const PORDER=['custom','siliconflow','dashscope','hf','groq','gemini','openrouter'];
 const keysAll=()=>store.get('keys',{});
-const pkey=p=>{const k=(keysAll()[p]||{}).key||'';return p==='openrouter'?(k||DEFAULT_KEY):k};
+const pkey=p=>{const k=(keysAll()[p]||{}).key||'';return p==='openrouter'?(orCurrent()||orList()[0]):k};
 const pbase=p=>(((keysAll()[p]||{}).base)||PROV[p].base||'').replace(/\/+$/,'');
 const phas=p=>p==='custom'?!!pbase('custom'):!!pkey(p);
 const tierOf=k=>store.get('tier:'+k,'normal');
+/* ---- external model plug-in (custom_model.js or pasted code) ---- */
+const PLUG=()=>{const p=window.JERON_CUSTOM;return p&&p.enabled!==false?p:null};
+function loadPlugCode(){
+  const code=store.get('plugcode','');if(!code)return;
+  try{(new Function(code))()}catch(e){dbg('plug code error',String(e.message||e));setTimeout(()=>{try{toast('خطأ بكود النموذج الخارجي: '+String(e.message||e).slice(0,60))}catch(_){}},1500)}
+}
+async function plugChat(messages,onDelta,signal,task){
+  const P=PLUG();let acc='';
+  const out=await P.chat({messages,task,signal,onDelta:d=>{acc+=d;onDelta(acc)}});
+  const txt=typeof out==='string'&&out.trim()?out:acc;
+  if(!txt||!txt.trim())throw new Error('plug empty');
+  if(txt!==acc)onDelta(txt);
+  return txt;
+}
 
 /* ---- model families ---- */
 const FAM={
@@ -1166,13 +1188,14 @@ function customCands(){
 }
 let rotCount=store.get('rot',0);
 function chatCands(task){
-  const tier=tierOf('chat'),pin=store.get('pin','');
+  const tier0=tierOf('chat'),tier=tier0==='custom'?'normal':tier0,pin=store.get('pin','');
   let order=FAM_ORDER[tier].slice();
   if(task==='code'&&tier==='normal')order=['qwen3','hermes','llama','mytho','gemini'];
   if(pin&&order.includes(pin))order=[pin].concat(order.filter(x=>x!==pin));
   else if(store.get('rotate',false)){rotCount++;store.set('rot',rotCount);const r=rotCount%order.length;order=order.slice(r).concat(order.slice(0,r))}
   const provs=PORDER.filter(p=>p!=='custom');
   let out=customCands();
+  if((tier0==='custom'||pin==='plug')&&typeof PLUG==='function'&&PLUG()&&PLUG().chat)out=[{id:'plug',plug:true,fam:'plug',famN:PLUG().name||'مخصص'}].concat(out);
   for(const fk of order)out=out.concat(famCands(fk,tier,provs));
   out=out.concat(famCands('qwen3',tier==='pro'?'normal':'pro',provs));
   if(task!=='code'&&LOCAL.installed()&&(store.get('localAuto',true)||isOffline()))out.push({id:'local',local:true,fam:'local',famN:'محلي'});
@@ -1198,15 +1221,17 @@ async function runText(task,messages,onDelta,user,opt){
   const cands=rankText(task,!!opt.vision,!!opt.ar);let lastErr=null,n=0;const off=isOffline();
   for(let i=0;i<cands.length;i++){
     const c=cands[i];
-    if(c.local){if(!LOCAL.installed()||task==='code')continue}
+    if(c.plug){}
+    else if(c.local){if(!LOCAL.installed()||task==='code')continue}
     else if(off)continue;
     if(creditOut()&&!c.free&&!c.extra)continue;
     if(n++>=14)break;
     try{
-      const out=c.local?await LOCAL.run(messages,onDelta,user):await streamOnce(c,messages,onDelta,user,task);
+      const out=c.plug?await plugChat(messages,onDelta,user,task):c.local?await LOCAL.run(messages,onDelta,user):await streamOnce(c,messages,onDelta,user,task);
       store.set('win:'+task,c.id);if(opt.onModel)opt.onModel(c);return out;
     }catch(e){
       if(e.user)throw e;
+      if(e.rotated){i--;n--;continue}
       if(e.status===400&&/token|length|exceed|too (large|long)/i.test(e.message||'')&&!c.cap){c.cap=4096;i--;n--;continue}
       dbg('text',c.id,e.status||'',String(e.message).slice(0,90));markFail(ckey(c),e.status);lastErr=e;
     }
@@ -1312,7 +1337,7 @@ async function pollImage(prompt,size,signal){
   }finally{clearTimeout(t);un()}
 }
 function imgCands(hasRefs,size){
-  const tier=tierOf('image'),out=[],Q=IMG_SIZES.qwen[size],F=IMG_SIZES.flux[size];
+  const tier=tierOf('image')==='pro'?'pro':'normal',out=[],Q=IMG_SIZES.qwen[size],F=IMG_SIZES.flux[size];
   const qwen=[];
   const chain=async(list,s)=>{let last;for(const f of list){try{return await f()}catch(e){if(s.aborted||e.user)throw e;last=e}}throw last};
   if(phas('siliconflow'))qwen.push({id:'sf:qwen',n:'Qwen-Image',run:(p,r,s)=>hasRefs?sfImage('Qwen/Qwen-Image-Edit',p,Q,r,s):chain(tier==='pro'?[()=>sfImage('Qwen/Qwen-Image-2512',p,Q,r,s),()=>sfImage('Qwen/Qwen-Image',p,Q,r,s)]:[()=>sfImage('Qwen/Qwen-Image',p,Q,r,s)],s)});
@@ -1329,6 +1354,7 @@ function imgCands(hasRefs,size){
   return(tier==='pro'?qwen.concat(flux,ors,poll):flux.concat(qwen,ors,poll));
 }
 async function genImage(prompt,refs,size,signal){
+  if(tierOf('image')==='custom'&&PLUG()&&PLUG().image){try{const b=await PLUG().image({prompt,refs,size,signal});if(b&&b.size)return b}catch(e){if(signal&&signal.aborted)throw e;dbg('plug image',String(e.message||e).slice(0,80))}}
   const cands=imgCands(refs.length>0,size);let last=null,credit=false,n=0;
   for(const c of cands){
     if(cooling('img|'+c.id))continue;if(n++>=7)break;
@@ -1420,7 +1446,7 @@ async function orVideo(m,prompt,signal){
   return await cr.blob();
 }
 function vidCands(ref){
-  const tier=tierOf('video'),out=[];
+  const tier=tierOf('video')==='pro'?'pro':'normal',out=[];
   const two=async(a,b,s)=>{try{return await a()}catch(e){if(s.aborted||e.user)throw e;return await b()}};
   if(phas('siliconflow')){
     const hi=ref?'Wan-AI/Wan2.1-I2V-14B-720P':'Wan-AI/Wan2.1-T2V-14B',lo=ref?'Wan-AI/Wan2.1-I2V-14B-720P-Turbo':'Wan-AI/Wan2.1-T2V-14B-Turbo';
@@ -1434,6 +1460,7 @@ function vidCands(ref){
   return out;
 }
 async function genVideo(prompt,ref,signal,note){
+  if(tierOf('video')==='custom'&&PLUG()&&PLUG().video){try{const b=await PLUG().video({prompt,ref,signal,note});if(b&&b.size)return b}catch(e){if(signal&&signal.aborted)throw e;dbg('plug video',String(e.message||e).slice(0,80))}}
   if(!VMODELS.length&&phas('openrouter'))await loadVideoModels().catch(()=>{});
   const cands=vidCands(ref);let last=null,credit=false;
   for(const c of cands){
@@ -1507,6 +1534,7 @@ async function ttsOR(text,signal){
 }
 async function ttsCloud(text,signal){
   const cfg=ttsCfg(),order=cfg.engine==='device'?[]:(cfg.engine&&cfg.engine!=='auto'?[cfg.engine]:['custom','eleven','openai','openrouter']);
+  if(cfg.engine==='plug'&&PLUG()&&PLUG().tts){const ref=await mGet('refvoice').catch(()=>null);return await PLUG().tts({text,refVoice:ref||null,signal})}
   for(const e of order){
     try{
       if(e==='custom'&&cfg.custom&&cfg.custom.url)return await ttsCustom(text,cfg.custom,signal);
@@ -1517,7 +1545,7 @@ async function ttsCloud(text,signal){
   }
   throw new Error('no cloud tts');
 }
-const cloudTTSConfigured=()=>{const c=ttsCfg();return c.engine!=='device'&&!!((c.custom&&c.custom.url)||(c.eleven&&c.eleven.key&&c.eleven.voice)||(c.openai&&c.openai.base)||c.engine==='openrouter')};
+const cloudTTSConfigured=()=>{const c=ttsCfg();return c.engine!=='device'&&!!((c.engine==='plug'&&PLUG()&&PLUG().tts)||(c.custom&&c.custom.url)||(c.eleven&&c.eleven.key&&c.eleven.voice)||(c.openai&&c.openai.base)||c.engine==='openrouter')};
 async function doAudio(lastU,a){
   const text=lastU.content.replace(AUD_N,'').trim()||lastU.content;
   try{
@@ -1533,6 +1561,7 @@ async function doAudio(lastU,a){
 }
 async function sttCloud(blob,signal){
   const lang=(store.get('vlang','ar-IQ')||'ar').slice(0,2),cfg=store.get('stt',{});
+  if(store.get('sttmode','auto')==='plug'&&PLUG()&&PLUG().stt)return String(await PLUG().stt({blob,lang,signal})||'').trim();
   const tries=[];
   if(pkey('groq'))tries.push(['https://api.groq.com/openai/v1/audio/transcriptions',pkey('groq'),'whisper-large-v3-turbo']);
   if(pkey('siliconflow'))tries.push([pbase('siliconflow')+'/audio/transcriptions',pkey('siliconflow'),'FunAudioLLM/SenseVoiceSmall']);
@@ -1896,8 +1925,6 @@ const FILE_RULES='When you write code, deliver a complete working project:\n- Pu
 const P_CODE='MODE: senior full-stack engineer and UI designer. Build what the user asks as a complete, runnable project and make it look professional.\n'+FILE_RULES;
 const P_3D='MODE: 3D & animation director. Build a self-contained 3D scene, game or short animated film with Three.js r128 inside ONE index.html file.\n- Load Three with <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script> (OrbitControls only if really needed: https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js). No ES modules, no external model or texture files.\n- Build everything procedurally: primitives, LatheGeometry, ExtrudeGeometry, canvas textures, particles, fog, shadows, post-style effects with sprites.\n- For films: define const DURATION and a shot list, animate camera paths (lerp / CatmullRomCurve3), lighting, characters and title cards (HTML overlay, Arabic RTL supported); show a Play/Replay button and a progress bar; start on tap.\n- renderer.setPixelRatio(Math.min(devicePixelRatio,2)), handle resize, use clock delta in requestAnimationFrame.\n- Music and sound: include <script src="jeron-audio.js"><\/script> and call JeronAudio.play({...score...},{loop:true}) on the first tap.\n'+FILE_RULES;
 const P_AUDIO='MODE: sound designer and composer.\n- When the user asks for MUSIC (a song, theme, beat, ambience), answer with ONE fenced block ```score containing JSON in this schema: '+SCORE_DOC+'\n- When the user asks for a SOUND EFFECT (explosion, laser, door, coin, magic...), answer with ONE fenced block ```sfx containing JSON in this schema: '+SFX_DOC+'\n- Add one or two short sentences describing the result (in the user\'s language). Nothing else.\n- For narration or voice-over requests just write the text to be spoken.';
-MODES.code={n:'مبرمج',i:'code',p:P_CODE};
-MODES.threed={n:'3D وأنيميشن',i:'cube',p:P_3D};
 MODES.audio={n:'صوتي وموسيقى',i:'music',p:P_AUDIO};
 
 /* ---- helpers ---- */
@@ -1960,11 +1987,11 @@ $('#sheet').addEventListener('click',async e=>{
 $('#btnMode').onclick=()=>{
   const cm=store.get('mode','general');
   openSheet('<h3>الوضع</h3>'+Object.keys(MODES).map(k=>'<button class="opt'+(k===cm?' sel':'')+'" data-mode="'+k+'">'+ic(MODES[k].i,22)+'<span>'+esc(MODES[k].n)+'</span></button>').join('')+
-    '<button class="opt" data-studio>'+ic('team',22)+'<span>استوديو جيرون <small>فريق عملاء + ساعات</small></span></button><button class="opt" data-sfxlib>'+ic('volume',22)+'<span>مكتبة المؤثرات الصوتية</span></button>');
+    '<button class="opt" data-sfxlib>'+ic('volume',22)+'<span>مكتبة المؤثرات الصوتية</span></button>');
 };
 function modeHint(){
   const m=store.get('mode','general');
-  $('#in').placeholder=m==='code'?'شنو تريد أبرمج لك؟ (مشروع كامل + معاينة + ZIP)':m==='threed'?'صف المشهد أو الفلم القصير اللي تريده...':m==='audio'?'صف الموسيقى أو المؤثر الصوتي...':'اسأل جيرون أي شي...';
+  $('#in').placeholder=m==='audio'?'صف الموسيقى أو المؤثر الصوتي...':'اسأل جيرون أي شي...';
 }
 const _updateModeBtn=updateModeBtn;
 updateModeBtn=function(){_updateModeBtn();modeHint()};
@@ -2010,7 +2037,7 @@ function codeBlockX(info,code,o){
     return '<div class="code live" data-cid="'+cid+'"><div class="ch"><span>'+title+'</span><span class="cb"><em>جاري الكتابة… '+n+' سطر</em></span></div><pre><code>'+esc(tail)+'</code></pre></div>';
   }
   const fold=n>MAX_FOLD||code.length>2200;
-  const btns=(isHtml?'<button data-pvcode>معاينة</button>':'')+'<button data-dlcode>تنزيل</button>'+(fold?'<button data-tgl>عرض</button>':'')+'<button data-cp>نسخ</button>';
+  const btns='<button data-dlcode>تنزيل</button>'+(fold?'<button data-tgl>عرض</button>':'')+'<button data-cp>نسخ</button>';
   return '<div class="code'+(fold?' fold':'')+'" data-cid="'+cid+'"><div class="ch"><span>'+title+(fold?' · '+n+' سطر':'')+'</span><span class="cb">'+btns+'</span></div><pre'+(fold?' hidden':'')+'><code>'+(fold?'':(o.light?esc(code):highlight(code)))+'</code></pre></div>';
 }
 function md(src,opt){
@@ -2049,7 +2076,6 @@ function md(src,opt){
 function asstHTML(m,isLast){
   let b='';
   if(m.content)b+='<div class="md">'+md(m.content,{mid:m.id,light:!!m.pending})+'</div>';
-  if(m.content&&!m.pending){try{b+=projCardHTML(m)}catch(e){}}
   if(m.media&&m.media.length)b+=m.media.map(x=>x.type==='audio'?'<div class="acard" data-mid="'+x.id+'"></div>':'<div class="mcard" data-mid="'+x.id+'" data-t="'+x.type+'"><div class="sk"></div></div>').join('');
   if(m.gen)b+='<div class="gen"><div class="shim"></div><div class="gs">'+(m.gen==='image'?'جاري إنشاء الصورة…':m.gen==='audio'?'جاري توليد الصوت…':'جاري إنشاء الفيديو… ممكن ياخذ كم دقيقة')+'</div></div>';
   if(m.pending&&!m.content&&!m.gen)b+='<div class="dots"><i></i><i></i><i></i></div>';
@@ -2079,14 +2105,14 @@ async function hydrate(){
 }
 /* ---- welcome tiles ---- */
 const SUGG=[
- ['code','ابنِ لي لعبة','سوي لي لعبة ثعبان كاملة بتصميم جميل واصوات، وأريد أشوفها قدامي'],
+ ['msg','اسألني أي شي','شنو أحسن طريقة أتعلم بيها لغة جديدة بسرعة؟'],
  ['image','ولّد صورة','ارسم صورة لمدينة مستقبلية عند الغروب'],
- ['cube','فلم 3D','__mode:threed'],
- ['music','موسيقى ومؤثرات','__mode:audio'],
- ['team','استوديو العملاء','__studio'],
- ['video','ولّد فيديو','سوي فيديو لموجة بحر عند الغروب'],
  ['wave','محادثة صوتية','__voice'],
- ['volume','حوّل نص لصوت','اقرأ هذا النص بصوت واضح: مرحبا بك بتطبيق جيرون']
+ ['music','موسيقى ومؤثرات','__mode:audio'],
+ ['video','ولّد فيديو','سوي فيديو لموجة بحر عند الغروب'],
+ ['volume','حوّل نص لصوت','اقرأ هذا النص بصوت واضح: مرحبا بك بتطبيق جيرون'],
+ ['lang','مترجم مانهوا','__mode:manhwa'],
+ ['book','معلّم','__mode:teacher']
 ];
 function welcomeHTML(){
   return '<div class="welcome"><div class="orb">'+LOGO(62)+'</div><h1>مرحبًا، شنو الخطوة الجاية؟</h1><div class="sug">'+
@@ -2095,19 +2121,10 @@ function welcomeHTML(){
 $('#msgs').addEventListener('click',e=>{
   const t=e.target.closest('[data-sug]');if(!t)return;
   const s=SUGG[+t.dataset.sug][2];e.stopImmediatePropagation();
-  if(s==='__studio'){openStudio();return}
   if(s==='__voice'){openVoice();return}
   if(s.startsWith('__mode:')){store.set('mode',s.slice(7));updateModeBtn();$('#in').focus();toast('اكتب شنو تريد');return}
   send(s);
 },true);
-
-/* ---- intent: games / sites / apps are code projects ---- */
-const PROJ_N=/(لعب[ةه]|game|موقع|website|web ?site|تطبيق|\bapp\b|صفح[ةه]|landing|لوح[ةه] تحكم|dashboard|حاسب[ةه]|calculator|بورتفوليو|portfolio|متجر|store)/i;
-function detectIntent(text,hasImg,prevWasMedia){
-  const t=(text||'').trim().slice(0,300),r=detectIntent0(text,hasImg,prevWasMedia);
-  if((r==='chat'||r==='video'||r==='image')&&!hasImg&&PROJ_N.test(t)&&GEN_V.test(t)&&!HOW.test(t))return 'code';
-  return r;
-}
 
 /* ---- chat flow ---- */
 function stripProjectFiles(text){
@@ -2116,7 +2133,7 @@ function stripProjectFiles(text){
   });
 }
 async function doText(c,lastU,a,intent){
-  const mode=store.get('mode','general'),codey=intent==='code'||mode==='code'||mode==='threed';
+  const mode=store.get('mode','general'),codey=false;
   const hist=c.msgs.filter(m=>m!==a).slice(-24);
   let sys=buildSystem();
   let pf={};try{pf=await projectFiles(c)}catch(e){}
@@ -2144,7 +2161,8 @@ async function doText(c,lastU,a,intent){
     const el=$('#msgs .m.a:last-child .md');
     if(el){el.innerHTML=md(acc,{mid:a.id,light:true});if(stick)scrollEnd(true)}else renderAll();
   };
-  await runText(task,api,acc=>{
+  const runner=(store.get('council',false)&&!vision&&task==='chat')?councilRun:runText;
+  await runner(task,api,acc=>{
     a.content=acc;const now=Date.now(),gap=acc.length>9000?420:acc.length>3000?260:140;
     if(now-lastR>=gap){lastR=now;clearTimeout(tm);paint(acc)}
     else{clearTimeout(tm);tm=setTimeout(()=>{lastR=Date.now();paint(a.content)},gap)}
@@ -2156,7 +2174,7 @@ async function respond(c){
   const prev=c.msgs[c.msgs.length-2],mode=store.get('mode','general');
   const prevMedia=!!(prev&&prev.role==='assistant'&&prev.media&&prev.media.some(x=>x.type==='image'));
   let intent=detectIntent(lastU.content,lastU.imgs.length>0,prevMedia);
-  if((mode==='code'||mode==='threed')&&!lastU.imgs.length&&['image','video','audio','chat','translate'].includes(intent))intent='code';
+  if(intent==='code'||intent==='translate')intent='chat';
   if(mode==='audio'&&intent!=='audio'&&intent!=='vision'&&!(intent==='image'&&lastU.imgs.length))intent='music';
   const a={id:uid(),role:'assistant',content:'',media:[],pending:true,gen:(intent==='image'||intent==='video'||intent==='audio')?intent:null,ts:Date.now()};
   c.msgs.push(a);setBusy(true);renderAll();ctrl=new AbortController();
@@ -2230,7 +2248,7 @@ function vcSetState(s,txt){
 function vcCap(t,who){const e=vcEl('vcCap');e.textContent=t||'';e.dataset.w=who||''}
 function openVoice(){
   closeDrawer();closeSheet();
-  vcEl('vc').classList.add('on');VC.on=true;VC.hist=[];VC.conv=curConv();VC.muted=false;VC.cloudOK=true;VC.errN=0;
+  vcEl('vc').classList.add('on');VC.on=true;VC.orOff=false;VC.hinted=false;VC.hist=[];VC.conv=curConv();VC.muted=false;VC.cloudOK=true;VC.errN=0;
   vcEl('vcMic').classList.remove('off');vcCap('');
   try{AB&&AB.keepAwake&&AB.keepAwake(true,'محادثة صوتية مع جيرون')}catch(e){}
   vcListen();
@@ -2332,8 +2350,9 @@ async function vcTurn(text){
     flush(true);
   }catch(e){
     if(my!==VC.turn||e.user)return;
-    VC.llmDone=true;vcSetState('listening',e.userMsg?'اتصال ضعيف':'اتصال ضعيف');
-    setTimeout(()=>{if(VC.on&&my===VC.turn){vcListen()}},2200);
+    VC.llmDone=true;
+    const why=e.userMsg||('ما كدرت أرد: '+String(e.message||e).slice(0,90)+' — راجع المفاتيح من الإعدادات');
+    vcSetState('idle',why);vcCap(why,'e');toast(why.slice(0,80));dbg('voice llm',String(e.message||e));
     return;
   }
   VC.llmDone=true;
@@ -2351,7 +2370,18 @@ async function vcPump(my){
   if(VC.pumping)return;VC.pumping=true;
   while(VC.q.length&&VC.on&&my===VC.turn){
     const it=VC.q.shift();vcSetState('speaking');
-    try{const b=it.p?await it.p:null;if(my!==VC.turn)break;if(b)await playBlob(b);else await deviceSpeak(it.text)}catch(e){}
+    try{
+      const b=it.p?await it.p:null;if(my!==VC.turn)break;
+      if(b)await playBlob(b);
+      else{
+        const ok=await deviceSpeak(it.text);
+        if(!ok&&my===VC.turn){
+          let done=false;
+          if(!VC.orOff&&orCurrent()){try{const bb=await ttsOR(it.text,VC.abort.signal);await playBlob(bb);done=true}catch(e){VC.orOff=true;dbg('voice or-tts',String(e.message||e).slice(0,80))}}
+          if(!done&&!VC.hinted){VC.hinted=true;toast('ما لقيت صوت عربي بجهازك: ثبّت صوت عربي من إعدادات الهاتف (Text-to-speech) أو اربط محرك صوت من إعدادات الصوت');}
+        }
+      }
+    }catch(e){}
   }
   VC.pumping=false;
   vcMaybeResume(my);
@@ -2379,13 +2409,16 @@ function pickVoice(lang,name){
 }
 function deviceSpeak(text){
   return new Promise(res=>{
-    if(!window.speechSynthesis){res();return}
+    if(!window.speechSynthesis){res(false);return}
     const cfg=store.get('dvoice',{}),u=new SpeechSynthesisUtterance(text);
     u.lang=cfg.lang||(/[؀-ۿ]/.test(text)?'ar-SA':'en-US');
     const v=pickVoice(u.lang,cfg.name);if(v)u.voice=v;
     u.rate=+cfg.rate||1;u.pitch=+cfg.pitch||1;
-    const end=()=>{VC.fake=false;res()};u.onend=end;u.onerror=end;VC.fake=true;
-    try{speechSynthesis.speak(u)}catch(e){end()}
+    let started=false;const t0=Date.now();
+    const end=ok=>{VC.fake=false;res(ok===true||started||(Date.now()-t0>700))};
+    u.onstart=()=>{started=true};u.onend=()=>end(true);u.onerror=()=>end(false);VC.fake=true;
+    try{speechSynthesis.speak(u)}catch(e){end(false)}
+    setTimeout(()=>{if(!started&&!speechSynthesis.speaking&&!speechSynthesis.pending){end(false)}},2500);
   });
 }
 function orbLoop(){
@@ -2429,17 +2462,17 @@ function voiceSettings(){
   const hasRef=!!window.__hasRef;
   openSheet('<h3>إعدادات الصوت</h3>'+
    '<div class="fs">لغة الاستماع</div>'+chips('vlang',[['ar-IQ','عراقي'],['ar-SA','عربي'],['en-US','English']],store.get('vlang','ar-IQ'))+
-   '<div class="fs">طريقة الاستماع</div>'+chips('sttmode',[['auto','تلقائي'],['cloud','Whisper (سحابي)']],store.get('sttmode','auto'))+
+   '<div class="fs">طريقة الاستماع</div>'+chips('sttmode',[['auto','تلقائي'],['cloud','Whisper (سحابي)']].concat(PLUG()&&PLUG().stt?[['plug',PLUG().name||'مخصص']]:[]),store.get('sttmode','auto'))+
    '<div class="fs">شخصية الكلام — كيف يحجي وياك</div>'+chips('persona',PERSONAS.map(p=>[p[1],p[0]]),pers)+
    '<textarea class="area" data-cfg="persona" placeholder="اكتب أسلوب الكلام اللي تريده، مثلاً: تحجي بنبرة باردة وواثقة مثل شخصية خيالية أحبها" style="min-height:70px">'+esc(pers)+'</textarea>'+
-   '<div class="fs">محرك الصوت (اللي يحجي)</div>'+chips('tts.engine',[['auto','تلقائي'],['device','صوت الجهاز'],['custom','سيرفر + عينة صوتي'],['eleven','ElevenLabs'],['openai','OpenAI-متوافق']],tts.engine||'auto')+
+   '<div class="fs">محرك الصوت (اللي يحجي)</div>'+chips('tts.engine',[['auto','تلقائي'],['device','صوت الجهاز'],['custom','سيرفر + عينة صوتي'],['eleven','ElevenLabs'],['openai','OpenAI-متوافق']].concat(PLUG()&&PLUG().tts?[['plug',PLUG().name||'مخصص']]:[]),tts.engine||'auto')+
    '<div class="fs">صوت الجهاز</div><select class="fi" data-cfg="dvoice.name"><option value="">تلقائي</option>'+vs.map(v=>'<option value="'+esc(v.name)+'"'+(dv.name===v.name?' selected':'')+'>'+esc(v.name+' · '+v.lang)+'</option>').join('')+'</select>'+
    inp('dvoice.rate','السرعة (1 = عادي)','number','1')+inp('dvoice.pitch','النبرة (1 = عادي)','number','1')+
    '<div class="fs">سيرفر صوتي مخصص (يستنسخ صوت من عينة)</div><div class="fh">شغّل على جهازك/سيرفرك نموذج TTS يدعم العينة الصوتية (XTTS / F5-TTS / Qwen3-TTS...) وحط رابطه هنا. العينة تنرسل مع كل جملة.</div>'+
    inp('tts.custom.url','رابط الـAPI (POST)','url','http://192.168.1.5:8020/tts')+
    chips('tts.custom.body',[['json','JSON'],['multipart','ملف (multipart)']],(tts.custom||{}).body||'json')+
    inp('tts.custom.tf','اسم حقل النص','text','text')+inp('tts.custom.rf','اسم حقل العينة الصوتية','text','speaker_wav')+inp('tts.custom.lf','اسم حقل اللغة (اختياري)','text','language')+inp('tts.custom.key','مفتاح (اختياري)','password','')+
-   '<div class="row2"><button class="btn2" data-refpick>'+(hasRef?'تغيير العينة الصوتية':'رفع عينة صوتية')+'</button><button class="btn2" data-refdel>حذف العينة</button></div><input type="file" id="refFile" accept="audio/*" hidden>'+
+   '<div class="row2"><button class="btn2" data-refpick>'+(hasRef?'تغيير العينة الصوتية':'رفع عينة (صوت أو فيديو)')+'</button><button class="btn2" data-refdel>حذف العينة</button></div><input type="file" id="refFile" accept="audio/*,video/*" hidden>'+
    '<div class="fs">ElevenLabs</div>'+inp('tts.eleven.key','API Key','password','')+inp('tts.eleven.voice','Voice ID (صوتك المستنسخ)','text','')+
    '<div class="fs">OpenAI-متوافق (/audio/speech)</div>'+inp('tts.openai.base','Base URL','url','https://.../v1')+inp('tts.openai.key','Key','password','')+inp('tts.openai.voice','Voice','text','alloy')+
    '<div class="row2"><button class="btn2 p" data-vtest>جرّب الصوت</button></div>');
@@ -2477,15 +2510,17 @@ function openSettings(){
   const ck=keysAll().custom||{};
   openSheet('<h3>الإعدادات</h3>'+
     '<div class="fs">مستوى النماذج: عادي ↔ برو</div>'+
-    srow('نموذج الكلام (Qwen3)',segHTML('tier:chat',[['normal','عادي'],['pro','برو']],tierOf('chat')))+
-    srow('الصور (FLUX / Qwen-Image)',segHTML('tier:image',[['normal','عادي'],['pro','برو']],tierOf('image')))+
-    srow('الفيديو (Wan2.1)',segHTML('tier:video',[['normal','عادي'],['pro','برو']],tierOf('video')))+
+    srow('نموذج الكلام (Qwen3)',segHTML('tier:chat',tierOpts('chat'),tierOf('chat')))+
+    srow('الصور (FLUX / Qwen-Image)',segHTML('tier:image',tierOpts('image'),tierOf('image')))+
+    srow('الفيديو (Wan2.1)',segHTML('tier:video',tierOpts('video'),tierOf('video')))+
     '<div class="fh">عادي = أسرع وأخف (Qwen3-30B · FLUX schnell · Wan2.1 Turbo). برو = أقوى (Qwen3-235B · Qwen-Image · Wan2.1 14B).</div>'+
     togHTML('rotate','بدّل النموذج تلقائياً بين رد ورد',false)+
+    togHTML('council','مجلس النماذج: كذا نموذج قوي يجاوبون ونموذج يدمج أفضل جواب (أقوى وأبطأ، ويصرف 4 أضعاف الرسائل)',false)+
     '<div class="row2"><button class="btn2" data-modelsheet>اختيار نموذج الكلام</button><button class="btn2" data-voiceset>إعدادات الصوت</button></div>'+
     '<div class="fh">إذا فشل نموذج (حد/خطأ/انقطاع) جيرون يبدّل لنموذج ثاني بصمت ويكمل الجواب بدون ما تحس.</div>'+
     '<div class="fs">مفاتيح المزودات — نماذج مفتوحة المصدر</div><div class="fh">كل مفتاح اختياري ويتخزن بجهازك بس. مفتاح واحد مجاني يكفي: مثلاً SiliconFlow (Qwen3 + Qwen-Image + Wan2.1) أو Groq.</div>'+provHTML+
-    '<div class="prov"><div class="pn">OpenRouter'+(((keysAll().openrouter||{}).key)?'<i class="okdot"></i>':'')+'</div><div class="pd">اتركه فاضي لاستخدام المفتاح الأساسي. <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a></div>'+tpl('openrouter','API Key (اختياري)')+'</div>'+
+    '<div class="prov"><div class="pn">OpenRouter · '+orStatus().alive+'/'+orStatus().total+' مفاتيح شغّالة<i class="okdot"></i></div><div class="pd">مفاتيح مضمّنة بالتطبيق + مفاتيحك هنا (واحد بكل سطر). إذا خلص حد مفتاح ينتقل للتالي تلقائياً. <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a></div><textarea class="area" data-cfg="keys.openrouter.list" style="min-height:70px;direction:ltr;text-align:left" placeholder="sk-or-v1-...&#10;sk-or-v1-..." spellcheck="false">'+esc((keysAll().openrouter||{}).list||'')+'</textarea><div class="row2"><button class="btn2" id="orReset">إعادة تفعيل كل المفاتيح</button></div></div>'+
+    '<div class="fs">نموذج خارجي (Gemini / أي نموذج)</div><div class="fh">'+(PLUG()?('مفعّل: <b>'+esc(PLUG().name||'مخصص')+'</b> — يدعم: '+['chat','image','video','tts','stt'].filter(k=>PLUG()[k]).join(' · ')+'. اختره من "مخصص" فوق.'):'مو مفعّل. افتح الملف GEMINI_MODEL_PLUGIN.md وانسخه لـ Gemini يكتبلك الكود، وبعدين الصقه هنا (أو حطه بملف custom_model.js).')+'</div><textarea class="area" id="plugIn" style="min-height:90px;direction:ltr;text-align:left" placeholder="// الصق كود النموذج الخارجي هنا" spellcheck="false"></textarea><div class="row2"><button class="btn2 p" id="plugSave">حفظ وتفعيل</button><button class="btn2" id="plugClear">حذف</button></div>'+
     '<div class="prov"><div class="pn">'+esc(PROV.custom.n)+(pbase('custom')?'<i class="okdot"></i>':'')+'</div><div class="pd">'+esc(PROV.custom.note)+'</div><input class="fi" data-cfg="keys.custom.base" type="url" value="'+esc(ck.base||'')+'" placeholder="http://192.168.1.5:11434/v1" autocomplete="off"><input class="fi" data-cfg="keys.custom.models" type="text" value="'+esc(ck.models||'')+'" placeholder="qwen3:8b" autocomplete="off"><input class="fi" data-cfg="keys.custom.key" type="password" value="'+esc(ck.key||'')+'" placeholder="Key (اختياري)" autocomplete="off"></div>'+
     '<div class="fs">النموذج المحلي — يشتغل بدون نت</div><div class="fh">نموذج Qwen3 صغير يشتغل داخل الهاتف نفسه. تنزّله مرة وحدة (يحتاج نت) وبعدها إذا انقطع النت أو ضعف يشتغل تلقائياً. أبطأ وأضعف من النماذج السحابية.</div>'+
     segHTML('local.model',[['onnx-community/Qwen3-0.6B-ONNX','Qwen3 · 0.6B خفيف'],['onnx-community/Qwen3-1.7B-ONNX','Qwen3 · 1.7B أقوى']],lc.model)+
@@ -2494,8 +2529,9 @@ function openSettings(){
     '<div class="fs">متقدم</div>'+togHTML('nativenet','استخدم شبكة التطبيق لكل الطلبات (يحل مشاكل الاتصال)',false)+
     '<div class="fs">تعليمات مخصصة (تنطبق على كل المحادثات)</div><textarea class="area" id="ciIn" placeholder="مثال: جاوبني بالعراقي وباختصار"></textarea><div class="row2"><button class="btn2 p" id="ciSave">حفظ</button></div>'+
     '<div class="row2" style="margin-top:18px"><button class="btn2" id="keyChk">حالة مفتاح OpenRouter</button><button class="btn2" id="expChat">تصدير المحادثة</button></div><div id="keyOut" style="padding:12px 6px;color:var(--mut);font-size:14px;line-height:1.8"></div><div id="apiSec">'+apiKeyHTML()+'</div>');
-  $('#ciIn').value=store.get('ci','');
+  $('#ciIn').value=store.get('ci','');$('#plugIn').value=store.get('plugcode','');
 }
+function tierOpts(k){const o=[['normal','عادي'],['pro','برو']];if(PLUG()&&PLUG()[k])o.push(['custom',PLUG().name||'مخصص']);return o}
 function rebuildSheet(){
   const sc=$('#sheet').scrollTop;if(SHEET_RB){SHEET_RB();$('#sheet').scrollTop=sc}
 }
@@ -2503,7 +2539,7 @@ const HOOKS={
   'local.model':()=>{LOCAL.gen=null;const c=LOCAL.cfg();c.installed=false;store.set('local',c)}
 };
 function afterCfg(path){
-  if(/^keys\./.test(path)){store.set('cool',{});store.set('nocredit',0)}
+  if(/^keys\./.test(path)){store.set('cool',{});store.set('nocredit',0);store.set('ordead',{})}
   if(path==='tts.engine'||/^tts\./.test(path))VC.cloudOK=true;
   if(HOOKS[path])HOOKS[path]();
 }
@@ -2520,13 +2556,20 @@ $('#sheet').addEventListener('click',async e=>{
     try{const out=await LOCAL.run([{role:'user',content:'قول مرحبا بجملة وحدة'}],()=>{},null);toast(out.slice(0,60))}catch(err){toast('فشل: '+String(err.message||err).slice(0,60))}
     return;
   }
+  if(e.target.closest('#orReset')){store.set('ordead',{});store.set('nocredit',0);store.set('cool',{});toast('تم');rebuildSheet();return}
+  if(e.target.closest('#plugSave')){
+    const code=$('#plugIn').value;store.set('plugcode',code);window.JERON_CUSTOM=window.__JC0||window.JERON_CUSTOM;
+    try{(new Function(code))();toast(PLUG()?'تم تفعيل: '+(PLUG().name||'النموذج الخارجي'):'الكود اشتغل بس ما عرّف JERON_CUSTOM')}catch(err){toast('خطأ بالكود: '+String(err.message||err).slice(0,70))}
+    rebuildSheet();return;
+  }
+  if(e.target.closest('#plugClear')){store.set('plugcode','');toast('انحذف (يرجع للملف الأساسي بعد إعادة تشغيل التطبيق)');rebuildSheet();return}
   if(e.target.closest('[data-refpick]')){$('#refFile').click();return}
   if(e.target.closest('[data-refdel]')){mDel('refvoice');window.__hasRef=false;toast('انحذفت العينة');rebuildSheet();return}
   if(e.target.closest('[data-vtest]')){vcTest();return}
 });
 $('#sheet').addEventListener('change',async e=>{
   const t=e.target;
-  if(t.id==='refFile'){const f=t.files&&t.files[0];if(f){await mPut('refvoice',f);window.__hasRef=true;toast('تم حفظ العينة الصوتية');rebuildSheet()}return}
+  if(t.id==='refFile'){const f=t.files&&t.files[0];if(f){try{toast('جاري تجهيز العينة…');await mPut('refvoice',await refToWav(f));window.__hasRef=true;toast('تم حفظ العينة الصوتية');rebuildSheet()}catch(err){toast('تعذر قراءة الصوت من الملف')}}return}
   if(!t.dataset||!t.dataset.cfg)return;
   let v=t.value;
   if(t.type==='number')v=v===''?'':Number(v);
@@ -2549,332 +2592,79 @@ async function localInstall(){
 addEventListener('offline',()=>toast(LOCAL.installed()?'انقطع النت — حوّلت للنموذج المحلي':'انقطع النت'));
 addEventListener('online',()=>toast('رجع النت'));
 
-/* ============================== STUDIO · agents · departments · hours ============================== */
-const ST_DEPTS={
-  code:{n:'البرمجة',i:'code'},image:{n:'الصور',i:'image'},audio:{n:'الصوت والموسيقى',i:'music'},
-  threed:{n:'3D',i:'cube'},story:{n:'القصة والنصوص',i:'file'},video:{n:'الفيديو',i:'play'}
-};
-const ST_ORDER=['code','image','audio','threed','story','video'];
-const ST_NAMES=['زيد','ليلى','حيدر','سارة','علي','نور','كرار','مريم','حسن','رنا','عمر','دانة'];
-const ST_KINDS=[['game','لعبة'],['app','تطبيق'],['site','موقع'],['film','فلم / أنيميشن'],['other','مشروع حر']];
-const ST_TIMES=[[10,'10 د'],[30,'30 د'],[60,'ساعة'],[120,'ساعتين'],[180,'3 ساعات'],[360,'6 ساعات']];
-const ST={cur:null,run:false,paused:false,ac:null,view:'setup',cfg:null,tick:0};
-const stCfg=()=>ST.cfg||(ST.cfg=Object.assign({brief:'',kind:'game',depts:['code','image','audio','threed','story'],agents:5,mins:60},store.get('stcfg',{})));
-const stEl=()=>document.getElementById('studio');
-const stSleep=ms=>new Promise(r=>setTimeout(r,ms));
-const stSlug=s=>String(s||'x').toLowerCase().replace(/[^a-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40)||'x';
+/* ============================== v3: multi-key rotation · model council · voice sample tools ============================== */
 
-/* ---------- persistence ---------- */
-async function stSave(S){
-  S=S||ST.cur;if(!S)return;if(ST.run)S.elapsed=Date.now()-S.t0;
-  const files={};for(const p in S.files){const f=S.files[p];if(f.text!=null)files[p]={text:f.text};else if(f.blob){files[p]={blob:1};await mPut('sb:'+S.id+':'+p,f.blob)}}
-  const meta=Object.assign({},S,{files});
-  await mPut('studio:'+S.id,meta);
-  const list=store.get('stlist',[]).filter(x=>x.id!==S.id);
-  list.unshift({id:S.id,title:S.title||S.brief.slice(0,40),ts:Date.now(),status:S.status,kind:S.kind});
-  store.set('stlist',list.slice(0,20));
+/* ---- api errors: rotate OpenRouter keys instead of giving up ---- */
+async function apiFail(res){
+  let m='';try{m=(await res.clone().json()).error?.message||''}catch(e){}
+  const e=new Error(m||('HTTP '+res.status));e.status=res.status;
+  const isOR=/openrouter\.ai/i.test(res.url||'');
+  const limit=res.status===402||res.status===401||(res.status===429&&/per-?day|daily|free-models|credit|key limit|limit exceeded/i.test(m))||NOCREDIT.test(m);
+  if(isOR&&limit){
+    const k=orCurrent();
+    if(k){
+      orKill(k,res.status===401?24*3600e3:3*3600e3);
+      if(orCurrent()){e.rotated=true;dbg('or key switched',orStatus().alive+'/'+orStatus().total);return e}
+    }
+    e.credit=true;flagNoCredit();
+  }else if(res.status===402||NOCREDIT.test(m)){e.credit=true;if(isOR||!res.url)flagNoCredit()}
+  return e;
 }
-async function stLoad(id){
-  const S=await mGet('studio:'+id);if(!S)return null;
-  for(const p in S.files)if(S.files[p].blob){const b=await mGet('sb:'+id+':'+p);if(b)S.files[p]={blob:b};else delete S.files[p]}
-  return S;
-}
-function stLog(S,t,kind){S.log.push({t:Date.now(),m:t,k:kind||''});if(S.log.length>200)S.log.shift();stRender()}
 
-/* ---------- LLM helpers ---------- */
-async function stLLM(S,task,sys,user,agent){
-  if(ST.ac&&ST.ac.signal.aborted)throw new Error('stopped');
-  const msgs=[{role:'system',content:sys},{role:'user',content:user}];
-  let n=0;
-  const out=await runText(task,msgs,d=>{if(agent){agent.chars=(typeof d==='string'?d.length:0);if(++n%25===0)stRender()}},null,{});
-  if(agent)agent.chars=out.length;
+/* ---- model council: several strong models answer, one editor merges the best ---- */
+function councilMembers(task){
+  const seen=new Set(),out=[];
+  for(const c of rankText(task,false,true)){
+    if(c.local||c.plug)continue;
+    const f=c.fam||(c.or?'or':'x')+':'+String(c.id).split('/')[0];
+    if(seen.has(f))continue;seen.add(f);out.push(c);
+    if(out.length>=3)break;
+  }
   return out;
 }
-const stJSON=t=>looseJSON(t);
-
-/* ---------- allocation ---------- */
-function stAllocate(depts,n){
-  const ds=ST_ORDER.filter(d=>depts.includes(d));if(!ds.length)ds.push('code');
-  n=Math.max(1,Math.min(12,n|0||1));const list=ds.slice(0,n);
-  const extra=['code','image','audio','story','threed','video'].filter(d=>ds.includes(d));
-  for(let i=0;list.length<n;i++)list.push(extra[i%extra.length]);
-  const cnt={};
-  return list.map((d,i)=>{cnt[d]=(cnt[d]||0)+1;return{id:'a'+i,name:ST_NAMES[i%ST_NAMES.length],dept:d,directive:'',status:'idle',chars:0,done:0,task:''}});
-}
-
-/* ---------- planning ---------- */
-async function stPlan(S){
-  const has=d=>S.depts.includes(d),cnt=d=>S.agents.filter(a=>a.dept===d).length;
-  stLog(S,'جيرون يكتب خطة المشروع ويوزّع المهام على العملاء…');
-  const spec={
-    images:has('image')?Math.min(8,2*cnt('image')+1):0,music:has('audio')?Math.min(3,cnt('audio')):0,sfx:has('audio')?Math.min(8,3*cnt('audio')):0,
-    models3d:has('threed')?Math.min(3,cnt('threed')):0,video:has('video')?Math.min(2,cnt('video')):0
-  };
-  const sys='You are the creative director of a production studio that coordinates specialist AI agents. Reply with ONE JSON object only (no markdown). Schema: {"title":"short project name","summary":"2-4 sentences: what we are building and its look/feel","style":"visual+audio art direction in one sentence","directives":{"<dept>":"concrete instruction for that department"},"images":[{"name":"snake_case","prompt":"detailed English image prompt","size":"square|wide|portrait"}],"music":[{"name":"snake_case","desc":"mood, tempo, instruments"}],"sfx":[{"name":"snake_case","desc":"what it sounds like, when used"}],"models3d":[{"name":"snake_case","desc":"what to model"}],"video":[{"name":"snake_case","prompt":"English video prompt"}],"story":"outline of story / content / levels in a few lines"}. Departments: '+S.depts.join(', ')+'. Counts to produce: '+JSON.stringify(spec)+'. Use [] for departments not requested. Names must be short ascii.';
-  const kind=(ST_KINDS.find(k=>k[0]===S.kind)||[0,'مشروع'])[1];
-  const out=await stLLM(S,'chat',sys,'Project type: '+kind+'\nUser request (may be Arabic dialect, understand it fully):\n'+S.brief);
-  const p=stJSON(out)||{};
-  S.title=p.title||S.brief.slice(0,30);S.plan={summary:p.summary||S.brief,style:p.style||'',story:typeof p.story==='string'?p.story:JSON.stringify(p.story||''),directives:p.directives||{}};
-  const arr=x=>Array.isArray(x)?x.filter(o=>o&&typeof o==='object'):[];
-  S.steps=[];
-  const add=(dept,kind,item,label)=>S.steps.push({id:'s'+S.steps.length,dept,kind,item,label,done:false,phase:'A'});
-  if(has('story'))add('story','story',{},'كتابة القصة والنصوص');
-  arr(p.images).slice(0,spec.images).forEach(o=>add('image','image',o,'صورة: '+(o.name||'')));
-  arr(p.music).slice(0,spec.music).forEach(o=>add('audio','music',o,'موسيقى: '+(o.name||'')));
-  arr(p.sfx).slice(0,spec.sfx).forEach(o=>add('audio','sfx',o,'مؤثر: '+(o.name||'')));
-  arr(p.models3d).slice(0,spec.models3d).forEach(o=>add('threed','model3d',o,'مجسم: '+(o.name||'')));
-  arr(p.video).slice(0,spec.video).forEach(o=>add('video','video',o,'فيديو: '+(o.name||'')));
-  if(has('image')&&!S.steps.some(s=>s.kind==='image'))add('image','image',{name:'cover',prompt:S.brief+', concept art, highly detailed',size:'wide'},'صورة: cover');
-  if(has('audio')&&!S.steps.some(s=>s.kind==='music'))add('audio','music',{name:'theme',desc:'main theme that fits the project'},'موسيقى: theme');
-  if(has('threed')&&!S.steps.some(s=>s.kind==='model3d'))add('threed','model3d',{name:'hero',desc:'main character or object'},'مجسم: hero');
-  // agent directives
-  for(const a of S.agents)a.directive=S.plan.directives[a.dept]||('ركّز على قسم '+ST_DEPTS[a.dept].n+' لخدمة المشروع');
-  // assign assets round-robin to agents of the same dept
-  const rr={};
-  for(const s of S.steps){const mine=S.agents.filter(a=>a.dept===s.dept);if(mine.length){rr[s.dept]=(rr[s.dept]||0);s.agent=mine[rr[s.dept]++%mine.length].id}}
-  add(S.builder,'build',{},'بناء المشروع الأساسي');S.steps[S.steps.length-1].phase='B';S.steps[S.steps.length-1].agent=(S.agents.find(a=>a.dept===S.builder)||S.agents[0]).id;
-  stLog(S,'الخطة جاهزة: '+S.steps.length+' مهمة لـ '+S.agents.length+' عملاء','ok');
-}
-
-/* ---------- asset steps ---------- */
-function stPut(S,path,v){S.files[path]=typeof v==='string'?{text:v}:{blob:v}}
-const stBase=(item,fb)=>stSlug(item&&item.name||fb);
-async function stRunStep(S,s){
-  const ag=S.agents.find(a=>a.id===s.agent)||S.agents[0];ag.status='working';ag.task=s.label;stRender();
-  const sig=ST.ac.signal;
-  try{
-    if(s.kind==='story'){
-      const t=await stLLM(S,'chat','You are a game/film writer. Write in the language of the user request. Markdown only, concise but rich: characters, world, structure/levels, key lines of dialogue/UI texts.','Project: '+S.plan.summary+'\nStyle: '+S.plan.style+'\nOutline: '+S.plan.story+'\nUser request: '+S.brief,ag);
-      stPut(S,'story.md',t);
-    }else if(s.kind==='image'){
-      const b=await genImage((s.item.prompt||S.brief)+(S.plan.style?', '+S.plan.style:''),[],['square','wide','portrait'].includes(s.item.size)?s.item.size:'square',sig);
-      const ext=/jpe?g/.test(b.type)?'jpg':/webp/.test(b.type)?'webp':'png';
-      stPut(S,'assets/img/'+stBase(s.item,'img'+s.id)+'.'+ext,b);
-    }else if(s.kind==='music'){
-      const t=await stLLM(S,'chat','You are a composer. Reply with ONE JSON object only, schema: '+SCORE_DOC,'Write a track named "'+(s.item.name||'theme')+'" for: '+S.plan.summary+'\nMood: '+(s.item.desc||'')+'\nStyle: '+S.plan.style+'\nLoopable, 12-24 seconds.',ag);
-      const o=stJSON(t);if(!o||!o.tracks||!JeronAudio.parseScore(o))throw new Error('bad score');
-      const buf=await JeronAudio.render(o,{rate:22050,mono:true});stPut(S,'assets/audio/'+stBase(s.item,'music')+'.wav',JeronAudio.toWav(buf));
-    }else if(s.kind==='sfx'){
-      let o=null;const nm=stBase(s.item,'sfx');
-      const t=await stLLM(S,'chat','You are a sound designer. Reply with ONE JSON object only, schema: '+SFX_DOC,'Sound effect "'+nm+'": '+(s.item.desc||nm)+'\nProject: '+S.plan.summary,ag).catch(()=>'');
-      o=stJSON(t);
-      let buf;
-      try{if(o&&o.layers)buf=await JeronAudio.renderSfx(o,{rate:22050,mono:true});else throw 0}
-      catch(e){const pk=Object.keys(JeronAudio.presets).find(k=>(nm+' '+(s.item.desc||'')).toLowerCase().includes(k))||'select';buf=await JeronAudio.renderSfx(pk,{rate:22050,mono:true})}
-      stPut(S,'assets/audio/'+nm+'.wav',JeronAudio.toWav(buf));
-    }else if(s.kind==='model3d'){
-      const t=await stLLM(S,'code','You are a 3D artist writing Three.js r128 code (global THREE, no imports). Output ONE ```js models3d.js block. Define function build_'+stBase(s.item,'model').replace(/-/g,'_')+'(){ ... return THREE.Group } using only primitive geometries, materials, small details, and optionally an animate(group,t) helper. No external assets.','Model: '+(s.item.desc||s.item.name)+'\nProject: '+S.plan.summary+'\nStyle: '+S.plan.style,ag);
-      const b=fenceBlocks(t).find(x=>/js|javascript/i.test(x.lang||''))||fenceBlocks(t)[0];
-      if(!b||b.code.length<80)throw new Error('empty model');
-      const prev=S.files['models3d.js']?S.files['models3d.js'].text+'\n\n':'';
-      stPut(S,'models3d.js',prev+'/* '+s.item.name+' */\n'+b.code);
-    }else if(s.kind==='video'){
-      const b=await genVideo((s.item.prompt||S.brief)+(S.plan.style?', '+S.plan.style:''),null,sig,m=>{ag.task=s.label+' — '+m;stRender()});
-      stPut(S,'assets/video/'+stBase(s.item,'clip')+'.mp4',b);
-    }else if(s.kind==='build'){
-      await stBuild(S,ag);
-    }
-    s.done=true;ag.done++;stLog(S,'✓ '+ag.name+': '+s.label,'ok');
-  }catch(e){
-    if(ST.ac.signal.aborted||/stopped/.test(e.message||''))throw e;
-    s.tries=(s.tries||0)+1;
-    if(s.tries>=2||e.user){s.done=true;s.failed=true;stLog(S,'✗ '+ag.name+': '+s.label+' — '+String(e.userMsg||e.message||e).slice(0,90),'bad')}
-    else stLog(S,'تعثّر: '+s.label+' — سأحاول مرة ثانية','warn');
+async function councilRun(task,api,onDelta,signal,opt){
+  const mem=councilMembers(task);
+  if(mem.length<2)return runText(task,api,onDelta,signal,opt);
+  toast('مجلس النماذج: '+mem.map(c=>c.famN||c.id.split('/').pop()).join(' + '));
+  const draftMsgs=api.slice();
+  const drafts=(await Promise.all(mem.map(async c=>{
+    try{const t=await completeOnce(c,draftMsgs,signal,70000);return{n:c.famN||c.id,t}}
+    catch(e){if(signal&&signal.aborted)throw e;dbg('council member',c.id,String(e.message||e).slice(0,60));if(!e.rotated)markFail(ckey(c),e.status);return null}
+  }))).filter(Boolean);
+  if(drafts.length<2){
+    if(drafts.length===1){onDelta(drafts[0].t);if(opt&&opt.onModel)opt.onModel(mem[0]);return drafts[0].t}
+    return runText(task,api,onDelta,signal,opt);
   }
-  ag.status='idle';ag.task='';stRender();await stSave(S);
+  const last=api[api.length-1];
+  const lastTxt=typeof last.content==='string'?last.content:((last.content.find&&last.content.find(x=>x.type==='text'))||{}).text||'';
+  const sys='You are the chief editor of a council of AI models. You get the conversation and several independent draft answers to the last user message. Write the single best final answer: keep what is correct and useful from every draft, fix mistakes and contradictions, be complete but not padded, and reply in the same language and dialect as the user. Never mention the drafts, the council or the models.';
+  const body=api.slice(1,-1).concat([{role:'user',content:'Last user message:\n'+lastTxt+'\n\n'+drafts.map((d,i)=>'--- DRAFT '+(i+1)+' ---\n'+d.t).join('\n\n')+'\n\nNow write the final answer.'}]);
+  const out=await runText(task,[{role:'system',content:api[0].content+'\n\n'+sys}].concat(body),onDelta,signal,opt);
+  if(opt&&opt.onModel)opt.onModel({fam:'council',famN:'مجلس النماذج'});
+  return out;
 }
 
-/* ---------- code build / improve / verify ---------- */
-function stManifest(S){
-  const L=[];for(const p in S.files){
-    if(/^assets\//.test(p))L.push('- '+p+(/\.wav$/.test(p)?' (audio)':/\.mp4$/.test(p)?' (video)':' (image)'));
-    else if(p==='models3d.js')L.push('- models3d.js (Three.js r128 builder functions: '+((S.files[p].text.match(/function\s+(build_\w+)/g)||[]).join(', ')||'see file')+') — include it with <script src="models3d.js"> AFTER three.min.js');
-  }
-  return L.join('\n')||'(none)';
-}
-const stCodeSys=S=>'You are the lead engineer of a studio, building a '+((ST_KINDS.find(k=>k[0]===S.kind)||[0,'project'])[1])+'.\n'+FILE_RULES+'\nRules for this studio build: use the generated asset files by their exact relative paths (images via <img>/canvas drawImage, audio via new Audio("assets/audio/x.wav"), video via <video>); if an asset may be missing, code must still work without it (fallback drawing / silence). For synthesized sound you may also use window.JeronAudio (script jeron-audio.js is bundled automatically). Make it polished, responsive for phones (touch controls) and fully playable/usable. Arabic UI text where it fits. Output ONLY the project files.';
-function stMerge(S,text,opt){
-  opt=opt||{};let n=0;
-  for(const f of filesOfMessage(text)){
-    if(/^assets\//.test(f.path))continue;
-    const old=S.files[f.path];
-    if(old&&old.text&&old.text.length>2500&&f.code.length<old.text.length*0.45&&!opt.force){stLog(S,'تجاهلت نسخة مقطوعة من '+f.path,'warn');continue}
-    S.files[f.path]={text:f.code};n++;
-  }
-  return n;
-}
-async function stBuild(S,ag){
-  const sys=stCodeSys(S),user='PROJECT: '+S.plan.summary+'\nART/AUDIO DIRECTION: '+S.plan.style+'\nSTORY/STRUCTURE:\n'+String(S.plan.story).slice(0,3000)+'\n'+(S.files['story.md']?'STORY FILE:\n'+S.files['story.md'].text.slice(0,2500)+'\n':'')+'\nUSER REQUEST: '+S.brief+'\n\nGENERATED ASSET FILES AVAILABLE:\n'+stManifest(S)+'\n\nDirective for you: '+ag.directive+'\nBuild the full project now (index.html + any css/js files).';
-  const out=await stLLM(S,'code',sys,user,ag);
-  if(!stMerge(S,out,{force:true})){
-    // second try with stricter instruction
-    const out2=await stLLM(S,'code',sys,user+'\n\nIMPORTANT: your previous answer had no valid files. Reply ONLY with fenced code blocks like ```html index.html',ag);
-    if(!stMerge(S,out2,{force:true}))throw new Error('no code produced');
-  }
-  await stVerify(S,ag);
-}
-async function stVerify(S,ag){
-  for(let i=0;i<2;i++){
-    const r=await smokeTest(S.files,3500);
-    if(r.ok){S.lastErrs=0;return true}
-    S.lastErrs=r.errors.length;
-    stLog(S,'خطأ ببرنامج المعاينة، عميل البرمجة يصلحه…','warn');
-    const out=await stLLM(S,'code',stCodeSys(S),projectContext(S.files,50000)+'\nThe project throws these runtime errors when opened:\n'+r.errors.join('\n')+'\nFix them. Output every changed file COMPLETE.',ag);
-    stMerge(S,out);
-  }
-  const r=await smokeTest(S.files,3500);S.lastErrs=r.errors.length;return r.ok;
-}
-function stGallery(S){
-  const items=Object.keys(S.files).filter(p=>/^assets\//.test(p)||p==='story.md');
-  let h='<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(S.title)+'</title><style>body{margin:0;font-family:sans-serif;background:#0f1220;color:#eee;padding:16px}img,video{max-width:100%;border-radius:12px}.c{background:#1a1f35;border-radius:14px;padding:12px;margin:12px 0}</style></head><body><h1>'+esc(S.title)+'</h1><p>'+esc(S.plan&&S.plan.summary||'')+'</p>';
-  for(const p of items){
-    if(/\.(png|jpg|webp)$/.test(p))h+='<div class="c"><img src="'+p+'"><div>'+p+'</div></div>';
-    else if(/\.wav$/.test(p))h+='<div class="c"><div>'+p+'</div><audio controls src="'+p+'"></audio></div>';
-    else if(/\.mp4$/.test(p))h+='<div class="c"><video controls playsinline src="'+p+'"></video></div>';
-  }
-  return h+'</body></html>';
+/* ---- voice sample: accepts audio OR a video (we take its sound) and makes a clean mono WAV ---- */
+async function refToWav(file){
+  const ab=await file.arrayBuffer();
+  const ctx=new(window.OfflineAudioContext||window.webkitOfflineAudioContext)(1,22050,22050);
+  const buf=await new Promise((ok,no)=>ctx.decodeAudioData(ab,ok,no));
+  const rate=22050,secs=Math.min(buf.duration,25),n=Math.floor(secs*rate);
+  const off=new OfflineAudioContext(1,n,rate),src=off.createBufferSource();src.buffer=buf;src.connect(off.destination);src.start(0);
+  const r=await off.startRendering(),d=r.getChannelData(0);
+  const out=new DataView(new ArrayBuffer(44+n*2));
+  const w=(o,s)=>{for(let i=0;i<s.length;i++)out.setUint8(o+i,s.charCodeAt(i))};
+  w(0,'RIFF');out.setUint32(4,36+n*2,true);w(8,'WAVEfmt ');out.setUint32(16,16,true);out.setUint16(20,1,true);out.setUint16(22,1,true);
+  out.setUint32(24,rate,true);out.setUint32(28,rate*2,true);out.setUint16(32,2,true);out.setUint16(34,16,true);w(36,'data');out.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++){const v=Math.max(-1,Math.min(1,d[i]));out.setInt16(44+i*2,v<0?v*0x8000:v*0x7fff,true)}
+  return new Blob([out.buffer],{type:'audio/wav'});
 }
 
-/* ---------- improvement rounds ---------- */
-async function stRound(S,n){
-  const ag=S.agents.find(a=>a.dept===S.builder)||S.agents[0];
-  stLog(S,'جولة تحسين '+n+': المراجعة…');ag.status='working';ag.task='مراجعة المشروع';stRender();
-  const rev=await stLLM(S,'chat','You are a demanding QA lead and art director. Review the project and reply with ONE JSON object: {"score":1-10,"issues":["specific problems or missing features, most important first"],"improvements":["concrete upgrades: gameplay, polish, UX, visuals, sound, content"],"assets":[{"kind":"image|sfx|music","name":"snake","prompt":"..."}]} (assets: at most 3 extra assets worth generating, only for departments: '+S.depts.join(',')+').','Brief: '+S.brief+'\nPlan: '+S.plan.summary+'\nAssets:\n'+stManifest(S)+'\n'+projectContext(S.files,30000),ag).catch(()=>'');
-  const r=stJSON(rev)||{};ag.task='';
-  S.score=r.score||S.score;
-  const extra=(Array.isArray(r.assets)?r.assets:[]).slice(0,3).filter(a=>a&&((a.kind==='image'&&S.depts.includes('image'))||((a.kind==='sfx'||a.kind==='music')&&S.depts.includes('audio'))));
-  const ss=extra.map(a=>{const kind=a.kind;const dept=kind==='image'?'image':'audio';const mine=S.agents.filter(x=>x.dept===dept);return{id:'r'+n+'_'+Math.random().toString(36).slice(2,6),dept,kind,item:{name:a.name,prompt:a.prompt,desc:a.prompt},label:(kind==='image'?'صورة: ':'صوت: ')+(a.name||''),done:false,phase:'A',agent:mine[0]&&mine[0].id}});
-  await stPool(S,ss,Math.min(4,S.agents.length));
-  const before=S.files,snap={};for(const p in S.files)snap[p]=S.files[p];
-  const errsBefore=S.lastErrs||0;
-  ag.status='working';ag.task='تطبيق التحسينات';stRender();
-  const list=(r.issues||[]).concat(r.improvements||[]).slice(0,10).map((x,i)=>(i+1)+'. '+x).join('\n')||'Polish the UI, add more content and juice, fix any bugs.';
-  const out=await stLLM(S,'code',stCodeSys(S),projectContext(S.files,70000)+'\nASSET FILES:\n'+stManifest(S)+'\n\nImprove the project. Do these, in order of importance:\n'+list+'\nKeep everything that works. Output every changed file COMPLETE.',ag);
-  const changed=stMerge(S,out);
-  if(changed){
-    const ok=await stVerify(S,ag);
-    if(!ok&&(S.lastErrs||0)>errsBefore){S.files=snap;S.lastErrs=errsBefore;stLog(S,'التحسين ضرب المشروع، رجّعت النسخة السابقة','warn')}
-    else stLog(S,'✓ طُبّقت تحسينات الجولة '+n+(r.score?' (تقييم '+r.score+'/10)':''),'ok');
-  }
-  ag.status='idle';ag.task='';stRender();await stSave(S);
-}
-
-/* ---------- orchestration ---------- */
-async function stPool(S,steps,n){
-  const q=steps.filter(s=>!s.done);S.steps=S.steps||[];for(const s of steps)if(!S.steps.includes(s))S.steps.push(s);
-  const worker=async()=>{while(q.length){await stWait();const s=q.shift();await stRunStep(S,s)}};
-  await Promise.all(Array.from({length:Math.max(1,n)},worker));
-}
-async function stWait(){while(ST.paused&&!ST.ac.signal.aborted)await stSleep(400);if(ST.ac.signal.aborted)throw new Error('stopped')}
-function stAwake(on,t){try{AB&&AB.keepAwake&&AB.keepAwake(on,t||'')}catch(e){}}
-async function stFinish(S,msg){
-  S.status=msg;ST.run=false;stAwake(false);
-  if(!S.files['index.html']&&!Object.keys(S.files).some(p=>/\.html?$/.test(p)))stPut(S,'index.html',stGallery(S));
-  stPut(S,'README.md','# '+S.title+'\n\n'+(S.plan&&S.plan.summary||'')+'\n\nصُنع بواسطة استوديو جيرون — '+S.agents.length+' عملاء.\n\n## الملفات\n'+Object.keys(S.files).map(p=>'- '+p).join('\n')+'\n\nافتح index.html بالمتصفح.\n');
-  await stSave(S);stRender();
-  try{AB&&AB.notify&&AB.notify('جيرون','خلص المشروع: '+S.title)}catch(e){}
-}
-async function stRunAll(S){
-  if(ST.run)return;ST.run=true;ST.paused=false;ST.ac=new AbortController();S.status='running';stAwake(true,'استوديو جيرون يشتغل على مشروعك');
-  try{
-    if(!S.steps||!S.steps.length)await stPlan(S);
-    await stSave(S);stRender();
-    const conc=Math.max(1,Math.min(4,S.agents.length));
-    await stPool(S,S.steps.filter(s=>s.phase==='A'),conc);
-    const builds=S.steps.filter(s=>s.phase==='B');
-    if(S.builder==='code'||S.builder==='threed'||S.builder==='story'){await stPool(S,builds,1)}
-    else{builds.forEach(s=>s.done=true)}
-    if(!Object.keys(S.files).some(p=>/\.html?$/.test(p))&&S.builder!=='code'){stPut(S,'index.html',stGallery(S))}
-    const dur=S.mins*60000,maxR=Math.max(0,Math.min(40,Math.round(S.mins/5)));
-    while(S.round<maxR&&Date.now()<S.t0+dur-90000&&S.builder==='code'){
-      await stWait();S.round++;const t1=Date.now();
-      try{await stRound(S,S.round)}catch(e){if(/stopped/.test(e.message))throw e;stLog(S,'تعثرت الجولة: '+String(e.message||e).slice(0,80),'warn')}
-      if(S.round>=maxR)break;
-      const left=S.t0+dur-Date.now(),roundsLeft=Math.max(1,maxR-S.round);
-      const gap=Math.max(0,Math.min(300000,left/roundsLeft-(Date.now()-t1)));
-      for(let w=0;w<gap&&Date.now()<S.t0+dur-90000;w+=1000){await stWait();await stSleep(1000)}
-    }
-    await stFinish(S,'done');
-  }catch(e){
-    if(/stopped/.test(e.message||'')){await stFinish(S,'stopped')}
-    else{stLog(S,'توقف بسبب خطأ: '+String(e.userMsg||e.message||e).slice(0,120),'bad');S.status='paused';ST.run=false;stAwake(false);await stSave(S);stRender()}
-  }
-}
-function stNew(){
-  const c=stCfg();
-  if(c.brief.trim().length<4){toast('اكتب شنو تريد نسوي');return}
-  store.set('stcfg',c);
-  const depts=c.depts.length?c.depts:['code'];
-  const S={id:'s'+Date.now().toString(36),brief:c.brief.trim(),kind:c.kind,depts,mins:c.mins,t0:Date.now(),status:'new',round:0,files:{},log:[],steps:[],title:'',plan:null,
-    builder:depts.includes('code')?'code':depts.includes('threed')?'threed':(depts[0]||'code')};
-  S.agents=stAllocate(depts,c.agents);
-  if(!S.agents.some(a=>a.dept===S.builder))S.agents[0].dept=S.builder;
-  ST.cur=S;ST.view='live';stRender();stRunAll(S);
-}
-
-/* ---------- UI ---------- */
-const stDur=ms=>{ms=Math.max(0,ms)/1000|0;const h=ms/3600|0,m=(ms%3600)/60|0,s=ms%60;return(h?h+':':'')+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')};
-function stSetupHTML(){
-  const c=stCfg(),list=store.get('stlist',[]);
-  const chips=(arr,cur,key,multi)=>'<div class="chs">'+arr.map(o=>'<button class="ch2'+((multi?cur.includes(o[0]):String(cur)===String(o[0]))?' on':'')+'" data-st="'+key+'" data-v="'+o[0]+'">'+esc(o[1])+'</button>').join('')+'</div>';
-  const dep=ST_ORDER.map(d=>[d,ST_DEPTS[d].n]);
-  return '<div class="stsec">شنو تريد نسوي؟</div><textarea class="area" id="stBrief" placeholder="مثال: لعبة سباق سيارات ثلاثية الأبعاد بموسيقى حماسية وشخصيات كرتونية…">'+esc(c.brief)+'</textarea>'+
-  '<div class="stsec">النوع</div>'+chips(ST_KINDS,c.kind,'kind')+
-  '<div class="stsec">الأقسام المشاركة <button class="ch2" data-st="all">الكل</button></div>'+chips(dep,c.depts,'dept',true)+
-  '<div class="stsec">عدد العملاء</div><div class="stcnt"><button data-st="ag-">−</button><b>'+c.agents+'</b><button data-st="ag+">+</button></div><div class="fh">جيرون يوزّع العملاء على الأقسام ويعطي كل واحد مهمته.</div>'+
-  '<div class="stsec">مدة الشغل</div>'+chips(ST_TIMES,c.mins,'mins')+'<div class="fh">بعد البناء الأول يظل الفريق يراجع ويحسّن المشروع لين تخلص المدة. المدة الطويلة تحتاج التطبيق مفتوح (التطبيق يبقي الشاشة والشغل شغّال بإشعار).</div>'+
-  '<div class="row2"><button class="btn2 p" data-st="go">ابدأ الشغل</button></div>'+
-  (list.length?'<div class="stsec">مشاريع سابقة</div>'+list.map(x=>'<button class="btn2 stold" data-st="open" data-v="'+x.id+'">'+esc(x.title||'مشروع')+' · '+({running:'شغّال',done:'خلص',paused:'متوقف',stopped:'أُنهي',new:'جديد'}[x.status]||x.status)+'</button>').join(''):'');
-}
-function stLiveHTML(S){
-  const total=S.steps.length||1,done=S.steps.filter(s=>s.done).length,left=S.t0+S.mins*60000-Date.now();
-  const running=ST.run&&ST.cur===S,fin=S.status==='done'||S.status==='stopped';
-  const pct=Math.round(done/total*100);
-  const files=Object.keys(S.files);
-  return '<div class="stbar"><div><b>'+esc(S.title||'…')+'</b><div class="fh">'+(fin?'انتهى':S.status==='paused'?'متوقف مؤقتاً':running?(ST.paused?'متوقف مؤقتاً':'يشتغل · باقي '+stDur(left)):'متوقف')+(S.round?' · جولة '+S.round:'')+(S.score?' · تقييم '+S.score+'/10':'')+'</div></div><div class="stpct">'+pct+'%</div></div><div class="stprog"><i style="width:'+pct+'%"></i></div>'+
-  '<div class="row2">'+(running&&!fin?'<button class="btn2" data-st="pause">'+(ST.paused?'استمرار':'إيقاف مؤقت')+'</button><button class="btn2" data-st="stop">إنهاء الآن</button>':(!fin&&S.status==='paused'?'<button class="btn2 p" data-st="resume">متابعة</button>':''))+
-  '<button class="btn2" data-st="prev">معاينة</button><button class="btn2 p" data-st="zip">تحميل ZIP</button></div>'+
-  '<div class="stsec">العملاء</div>'+S.agents.map(a=>'<div class="agc '+a.status+'"><div class="agh"><b>'+esc(a.name)+'</b><span>'+esc(ST_DEPTS[a.dept].n)+'</span><i class="agdot"></i></div><div class="fh">'+esc(a.task||a.directive).slice(0,140)+'</div>'+(a.chars&&a.status==='working'?'<div class="fh">'+a.chars+' حرف</div>':'')+'</div>').join('')+
-  '<div class="stsec">النشاط</div><div class="stlog">'+S.log.slice(-14).reverse().map(l=>'<div class="'+l.k+'">'+esc(l.m)+'</div>').join('')+'</div>'+
-  '<div class="stsec">الملفات ('+files.length+')</div><div class="stfiles">'+files.slice(0,60).map(p=>'<span>'+esc(p)+'</span>').join('')+'</div>'+
-  '<div class="row2"><button class="btn2" data-st="back">مشروع جديد</button></div>';
-}
-function stRender(){
-  const el=stEl();if(!el||!el.classList.contains('on'))return;
-  const body=document.getElementById('stBody');
-  if(ST.view==='live'&&ST.cur){const sc=body.scrollTop;body.innerHTML=stLiveHTML(ST.cur);body.scrollTop=sc}
-  else if(ST.view==='setup'){if(!body.querySelector('#stBrief'))body.innerHTML=stSetupHTML()}
-}
-function openStudio(){
-  closeDrawer&&closeDrawer();closeSheet&&closeSheet();
-  stEl().classList.add('on');ST.view=ST.cur&&(ST.run||ST.cur.status!=='new')?'live':'setup';
-  document.getElementById('stBody').innerHTML='';stRender();
-  clearInterval(ST.tick);ST.tick=setInterval(()=>{if(stEl().classList.contains('on')&&ST.view==='live'&&ST.run&&!ST.paused)stRender()},5000);
-}
-function closeStudio(){stEl().classList.remove('on');clearInterval(ST.tick)}
-document.getElementById('stX').onclick=closeStudio;
-stEl().addEventListener('input',e=>{if(e.target.id==='stBrief'){stCfg().brief=e.target.value}});
-stEl().addEventListener('click',async e=>{
-  const b=e.target.closest('[data-st]');if(!b)return;const k=b.dataset.st,v=b.dataset.v,c=stCfg(),body=document.getElementById('stBody');
-  const redraw=()=>{body.innerHTML=stSetupHTML()};
-  if(k==='kind'){c.kind=v;redraw()}
-  else if(k==='dept'){c.depts=c.depts.includes(v)?c.depts.filter(x=>x!==v):c.depts.concat(v);redraw()}
-  else if(k==='all'){c.depts=c.depts.length===ST_ORDER.length?['code']:ST_ORDER.slice();redraw()}
-  else if(k==='ag+'){c.agents=Math.min(12,c.agents+1);redraw()}
-  else if(k==='ag-'){c.agents=Math.max(1,c.agents-1);redraw()}
-  else if(k==='mins'){c.mins=+v;redraw()}
-  else if(k==='go'){stNew()}
-  else if(k==='open'){const S=await stLoad(v);if(S){ST.cur=S;ST.view='live';stRender()}}
-  else if(k==='back'){if(ST.run){toast('أنهِ المشروع الحالي أولاً');return}ST.cur=null;ST.view='setup';redraw()}
-  else if(k==='pause'){ST.paused=!ST.paused;stRender()}
-  else if(k==='stop'){ST.ac&&ST.ac.abort()}
-  else if(k==='resume'){const S=ST.cur;if(S){S.t0=Date.now()-(S.elapsed||0);stRunAll(S)}}
-  else if(k==='prev'){const S=ST.cur;if(!S)return;const pf=Object.assign({},S.files);if(!Object.keys(pf).some(p=>/\.html?$/.test(p)))pf['index.html']={text:stGallery(S)};openPreview(pf,{title:S.title})}
-  else if(k==='zip'){const S=ST.cur;if(!S)return;const pf=Object.assign({},S.files);if(!Object.keys(pf).some(p=>/\.html?$/.test(p)))pf['index.html']={text:stGallery(S)};downloadProject(pf,stSlug(S.title))}
-});
+/* ---- plug-in boot ---- */
+try{loadPlugCode()}catch(e){}
 
 
-$('#btnStudio').onclick=openStudio;$('#btnVoice2').onclick=openVoice;$('#btnVoice').onclick=openVoice;
+$('#btnVoice2').onclick=openVoice;$('#btnVoice').onclick=openVoice;
 
 /* ============================== INIT ============================== */
 const I192='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAMAAABlApw1AAABgFBMVEVhcPddcfZVdfZZc/ZGffdKevZQd/ZMePVxafhsavZobPZibvR0ZvU/TKobJ14UJFYaHk4SH00QHksQHE4QHEgPHEgVG0cPG00PG0wPG0sOG0UTFz4PGksPGkoPGkkPFz8OGkgOGUgOGUcOGkYOGUYOGUMOGEUOGEQOGEEOFjwNGUANGEQNGEMNGD8NF0MNF0INF0ENF0ANFkANFj8NFUINFToMFz0MFj8MFj4MFjwMFT0MFTwMFTsMFDoLFDoLFDkLFDgOEjILEzcLEzYLEzQKEzUKEjUKEjMKETMKETEJETALDysJEC8JEC0JDysIDysIDioIDigIDScHDSYHDSUFDSgJDCQHDCQHDCMHDCIHCyIGCyIGCyEGCyAGCh8HCh4GCh4GCh0FCh0GCRsFCR0FCRwFCRsFCRoFCBoFCBkECBkFCBgECBgECBcEBxcEBxYEBxUEBhQEBhMDBhMDBhIDBREDBRADBQ8CBRIDBA8CBA4CBA0CBAwCAwwCAwsCAwoibou1AAAM0klEQVR42u2ai1saSRbFS6ORqN2AD3aRjRoEAioBzKCoGEFQo4gPJCgaE908jNnZzOzOPrLvf33vrapuGl80cHuT/paz3zc+ZrXOr+451YUM+4/NxToA3xrg3zaX/QH+ZXPZH+CfNhf7h81lf4C/21wdgG8O8Debi/3V5rI/wF9sLvsD/Nnm6gB8c4A/2Vz2B/jF5rI/wB9tLvYHm8v+AD/bXB2Abw7wk81lJcAXXVYCfLG5rAW44rIW4PeW6EfQpUH4tTUrsR8t0efPny8vP4LevcN/Xl7CN6xZyRqAq89X7y7foS7lh3fwLWsAfmeBrq6463cXb3/2eH5+eyG+urqyYi12Ra9Pnz6h4bdv31Z/cbl+OYFP8Gv4tgWLWQMg/Z9UfnK5fqrUCKwA+GSBIDwXYP+kWvmqql8rlRNAuLjgMyAXuyTXx49o/6xarVQKXxXla6FSqVbfIgIeR9RilvmvVCqlwhdF+VIowafVM4sI2Edqffhwcc79lwqFQnVwsAofSpzg/OLDB/LlLAAw+C/4Bgd9BUFwwgnoAT4Q6/378zdnJ8fcf7akDg6qB1mN4M35+/fU69ED6P6z2WxJcTiUEnxSKOBZ9AYIbAFQrZQOECBZQIBCMitmwEdADvBbap2dVcvgH7bdl4UEQYbgE0A4KEGRz8iXYxe0Oj/DB4DYf19WcQwOOpSsz4czOECAs3PiBdk5raAAVVGApM8AkBQ1qGKKaMXo/R/LAPl8rkEHZsjl82khOiEnoAV4UxuAz+fxKdy/Q4FPfbUR0BKwN6Q6MQTI4xoQAIMujwwRjuCEdkVygGPRYByA6hARcqjaCA4qx+QAZ5SqVo/L3H8E9t+jOB7JDHlcNYJqlXRJSoDXrzX/GCCP+sgBGuSPAo8eovJx9fXr7xMA/dcCJAYgCOpHQEvAXpPptHpUPjwoFGWA1EePOIBDjEAnKFWOqqd0q9IBnJ4eH2GAtsQJhAPQCeQIMET7pfLR8enp9wfA/Zf2CzuGARhmoLq0EezDCAgJ2AmRTo8q6F+cQB6Xiw9AEuAIAKBGUDk6pVqXVUl0fFwul0v6CYQB6q8bgSFEWINyGbpMInZMoqMj4R8KgAFyqQP9EkASOPQQcYJy+eiIZmVG7F8ECAdwnUAPES0BI7HP/e9igUWA1P7+GoBGIEYgXp4JAgoEdkShw8OD/d3iVjbH/btcA/03CAYdAy6NYAebfHhIsjQj8n+wW8T9lwHqv5VA0QmKOAMaAkbgvlTC/d/J5jX/TPq/UQOPgWC/VKJgYOX2dIi7L/Ij/cMJxAZuI5AnkSDYAgL4QfjxNg0wcv9O9K8T1IfoET0BO2xHkAJuX/ifAP9ODNDdBLwGkqBY2AUEHqQ2xNrzL7Z/Z3tT8+9C/4wN3AjRnQQH7RGwtrcf/G/lc9y/G/e/i7F7CTw6QbZIMARWal37+2C/APGB85/nn/sXALcQ1K51nCCS5UWAKuzvt2GCtekftj8L+z8h/Xeh7iVw1BHgedoeATtoRdw7uAf7Ij5B9O8W/iUAu6vInACfBzxGWzsYpN1d+JUtWWGt24fd39nalP7d6P/Bgwf1IzBDkJUELSKwFtzL7d/Zxu3PRCYmxnT/D7ruDVE9gT6ELYGwt98CA9tvWnsiPNu4+xnc/hE4fqT/RgQOQ5MlgTFHu827aRpgb0/a38rz9ITHRtxup8updHd3N0Og1hBy7SCwFt1vcvti+91Ot9rX3X0/QV2IgGCgRhARCEaGXSsA9sA+uBf2czw9YvshPg+7u3WCLhNFxj/58hjdQCju8jaYHgXbM68ibr6wnwH70eDYyBBuv1N5+PAegv47CLAI/HJXQwCG7SIXFs2UKWbePLqH5vLq1uxjfB7WA5gk0GKkI0iGbcFgkoA15V/u/uJ8dHpMpkfF7W+OQP+DI8RIxSGIHCGCcQrmCNhuY6H5nSK6F+FB+yOw/U6Q0vewr88IYLbI4s/WWhN0hLWsXgbZhwZi5vwXi7XqRqd5epx8+3t7+yRAHUGXqaNIvHmgGhGShjqbImBN7D/3L7ZfpqeX+7+boNFRpOfIWIXmCFixsXbgzsMPftj+edx+PHrQfk/vrQTNFFlIRxAxkgg7OybMMRPuDYcPxAfPnhGw39PD/QuC1otcQ/DIGx52OZ/HLm+bQGA7jaXXdxHjE4yOQXV7uK4TdLdOgAwefGdKVjm/ucWH0EgmAPjpuZ5LwuG5mMnMq4rSo6n3PoIus0dRDUFRfRBTXoR8fssUgUmAvYNdeAmWdxvd14+gAcGAKQLO4MrvvXq192qPFMCpqte9myYwcxRdp1BU1fW/AbiToKUaWAawWdzfLR3srbtvoaAl0CO0v/fSHMB2Q22C1qG98AibT69GbzDQHUVY4iSWGFqcyeO6jd2ZAECC9fVcZnVxfnpsdHRsunaMNleD+44ihzhGPR5xjuIpZMr/NttqrE18CsNjLM0vofAccw85VYWyyA79QSZfJydznMCEOXMA/B6RScprtHaRo6jBI/zvEQy3IfkozogJEAFoBMk0hEgQ8Kt0DaE9ArSvtujfDMDLly838mIE6fn56fDY2KgkqCG0XGQHXqdVVb+NTkTAP1znYME8LEwzgZcvN3UCTFFQG4LqbOdWxP0PwImvGrcf91/43zTjf4ttmtDGxvo6B8iscoJpfQiqNoRWitzP06Nvv8c3wfcfluEAGxtmvJkE4AhIkIQmQxGCY6NyCIDQ1yyB5n9AAftOaT+M9oV/YZ8QQCPQhyAQhmSOxBCaL7IxPTX7a7lm/G+yDfOCpxkneLFYlyPYRHxx1tzLG/if4tS3Pzgh/K+gf1ATppoBEAjAsJrUqqCVmceoqSIPwA+pRvtJsM/d55qy1BwAMqytrWVWV1/I82jUGKPGL280AB4fbfvDwv4K/Oa1XLN+mgbY2ECCDCeYjwYNMTJd5AHGZHzcnpEgpn9Z2l9r3g3LNyseooz2TNCvFvcSXA+R7l+PD/+VuVyuaTss14JwBJwgEo2Gg00SdNX5D9f8r6214qUlgBxPESeYlwTuGwR3Ffna/vOrA7ffkv8WAZAAEFbSi6LKzRBo/j2a/5UVbr81/zm21rqQAIaQiBpT1LDIwj9sfwjjk9T9t6h2AABhZYUXwTyB3H/3CD9+lrj/tiy0BbAKWpEzGL2F4OYTuUuc/273CO7/0vIKaHW1LYBMO0IC/jyYlgRqAwK+/07wP8bzn04n4Te0ZaE9AEkgmyyeaHCruLPI3aruP0zjP8NW29MLECcIBrVnstp7B0HNPxQgEY0sp9Pw020aaBeAI8gUjeqH6R1FVpw3/Le9PHtBIDhMUwvh24tsIFDEAIYgQPFEaonvf9siAXiRXl5MJcLBqZGhu2oACH1agKagAKmlZRL/L9gKidLLkWgiKN88U1Xl5jsHD3EAmv/E8yW8gFKIpSm0vGy816m3EWgBEifQ80hkeZlkaRoATpCIYohuOUs5QZ/hBIrS+U+zZRotLfIWaD2uHwES6A0OYQMikSWihckAlgAgaujxtRcHimpsQCqy9L0B6AT646z+NbLxEUbpf5kt0Sn1PB4LTo3WRqAT1A0g/jxFuCgpgNaCmyPQ/YfwGUYKsEik1GIqNZ8Ix/RrqWEEvXqDp4J4i0jB/5lqXZai08LCQjxWPwJJwP0LgFg8sbBAuCglABDcGEHPtQGEw4kEpf8UWyBVIj47M1W7lUoCeQsdGp0KzuIAKMWeU2ouEYdHwahXvHcg/+7eY6xwOJ6YI12SGGAuEQuGro2gRw6AA8QSc8QAc7SKI8C4V74LKDKEBcYEjQQAIE68IEuQKh4PY4aGjCPgA4AKe3mH43HaFVmcVrFYEI4h+Q6aWwC45QAmQ/AUiBEvSA/AS+CV7wEigCr8e0exw7HvHQBHEAqMyhDhCHAA0GDvyGQgRD+AOIsR69nsbCgwOe4dRgAvAngRYNg7jgCzz6jXowd4Nvs0oBF4IUOql/sfGQ8Ens4+owd4Rq6Zp3wEQ8PD7mEEgPwMD8EA/KGnM/SrsVlqzczMhKYmJ71A4HZP9vWNc/8AMBmCf0W+HD3ALAIIgiH3nKLMuYeE/6mQBf5n2YwVCkxOTj4GAveSoizBCcoBApYsxZ6SKwQCgnGwLQC83sfoH79Pv5oFAEgQ8I+PA8FQTFVjQ4+98IU/YIn/pyxkiQL+J+OI8IOq/oD2x59wAAtkFUDAjzMYxwngR78/YBVAwAr5/dBiND6uf5hEBgtkDQAQ+KV16d9vkX8LAXAIuvzWAfit0RMu4V58btFCVgFoCJosW4Y9sbnsDzBpc7Fxm8v+AI9trg7ANwf4jc3FvDaX/QF+bXPZH+BXNlcH4JsDDNtcHYAOQAegA9AB6AB0ADoAHYAOQAfg/xfgv7norAFi7I8GAAAAAElFTkSuQmCC',I512='data:image/png;base64,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';
